@@ -48,6 +48,9 @@
     setLive('totalValue', usd(data.totalValueCents), data.totalValueCents);
     setLive('totalGain', (data.totalGainCents >= 0 ? '+' : '') + usd(data.totalGainCents));
     setLive('totalGainPct', pct(data.totalGainPct));
+    if (typeof data.cashBalanceCents === 'number') {
+      setLive('cashBalance', usd(data.cashBalanceCents), data.cashBalanceCents);
+    }
 
     // Colour the gain figures
     document.querySelectorAll('[data-live="totalGain"],[data-live="totalGainPct"]').forEach(function (el) {
@@ -55,32 +58,49 @@
       el.classList.toggle('text-down', data.totalGainCents < 0);
     });
 
-    // Combined performance line
+    // Combined performance line (crosshair tooltip keyed by day)
     if (combinedCanvas && data.combined && data.combined.length) {
       window.MeridianCharts.line(
         combinedCanvas,
         data.combined.map(function (p) { return p.valueCents / 100; }),
         { color: '#D8B25A', axis: true, height: combinedCanvas.clientHeight || 280,
+          labels: data.combined.map(function (p) { return p.day; }),
+          seriesName: 'Portfolio value',
           fmt: function (v) { return '$' + Math.round(v).toLocaleString('en-US'); } }
       );
     }
 
-    // Allocation donut
+    // Allocation donut (per-segment hover tooltip)
     if (donutCanvas && data.allocation && data.allocation.length) {
       window.MeridianCharts.donut(
         donutCanvas,
-        data.allocation.map(function (a) { return { value: a.valueCents, color: a.accent }; }),
+        data.allocation.map(function (a) {
+          return { value: a.valueCents, color: a.accent, label: a.name, valueText: usd(a.valueCents) };
+        }),
         { centerLabel: usd(data.totalValueCents), centerSub: 'total', height: donutCanvas.clientHeight || 170 }
       );
     }
 
-    // Allocation legend weights
+    // Allocation legend weights (DOM building only — no HTML strings)
     if (legendEl && data.allocation) {
-      legendEl.innerHTML = data.allocation.map(function (a) {
-        return '<div class="flex justify-between items-center" style="padding:6px 0;border-bottom:1px solid var(--line)">' +
-          '<span class="legend-item"><span class="swatch" style="background:' + a.accent + '"></span>' + a.name + '</span>' +
-          '<span class="mono small">' + (a.weight * 100).toFixed(1) + '%</span></div>';
-      }).join('');
+      legendEl.textContent = '';
+      data.allocation.forEach(function (a) {
+        var row = document.createElement('div');
+        row.className = 'flex justify-between items-center legend-row';
+        var item = document.createElement('span');
+        item.className = 'legend-item';
+        var swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        swatch.style.background = a.accent;
+        item.appendChild(swatch);
+        item.appendChild(document.createTextNode(a.name));
+        var weight = document.createElement('span');
+        weight.className = 'mono small';
+        weight.textContent = (a.weight * 100).toFixed(1) + '%';
+        row.appendChild(item);
+        row.appendChild(weight);
+        legendEl.appendChild(row);
+      });
     }
 
     // Per-pool sparklines + values

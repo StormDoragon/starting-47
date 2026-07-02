@@ -25,6 +25,11 @@
       if (kind === 'line') {
         window.MeridianCharts.line(canvas, data.points, {
           color: data.color || data.accent, axis: !!data.axis, height: canvas.clientHeight,
+          labels: data.dates, seriesName: data.name,
+        });
+      } else if (kind === 'multi') {
+        window.MeridianCharts.multiLine(canvas, data.series, {
+          height: canvas.clientHeight, labels: data.labels,
         });
       } else if (kind === 'spark') {
         window.MeridianCharts.spark(canvas, data.points, data.color || data.accent);
@@ -46,16 +51,29 @@
   // ---- Live marketing ticker ---------------------------------------------
   var tickerTrack = document.querySelector('[data-ticker]');
   if (tickerTrack) {
+    var tickerItem = function (r) {
+      var tk = document.createElement('span');
+      tk.className = 'tk';
+      var sym = document.createElement('span');
+      sym.className = 'sym';
+      sym.textContent = r.sym;
+      var px = document.createElement('span');
+      px.className = 'px';
+      px.textContent = r.price;
+      var chg = document.createElement('span');
+      chg.className = 'chg ' + (r.up ? 'text-up' : 'text-down');
+      chg.textContent = (r.up ? '▲ ' : '▼ ') + r.changePct + '%';
+      tk.appendChild(sym);
+      tk.appendChild(px);
+      tk.appendChild(chg);
+      return tk;
+    };
     var render = function (rates) {
-      var html = rates.map(function (r) {
-        var cls = r.up ? 'text-up' : 'text-down';
-        var arrow = r.up ? '▲' : '▼';
-        return '<span class="tk"><span class="sym">' + r.sym + '</span>' +
-          '<span class="px">' + r.price + '</span>' +
-          '<span class="chg ' + cls + '">' + arrow + ' ' + r.changePct + '%</span></span>';
-      }).join('');
+      tickerTrack.textContent = '';
       // Duplicate the set so the marquee loops seamlessly.
-      tickerTrack.innerHTML = html + html;
+      rates.concat(rates).forEach(function (r) {
+        tickerTrack.appendChild(tickerItem(r));
+      });
     };
     var poll = function () {
       fetch('/api/ticker', { headers: { Accept: 'application/json' } })

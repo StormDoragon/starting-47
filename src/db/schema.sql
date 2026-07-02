@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
                    CHECK (kyc_status IN ('unverified','pending','approved','rejected')),
   totp_secret    TEXT,                      -- base32; set when 2FA enabled
   totp_enabled   INTEGER NOT NULL DEFAULT 0,
+  cash_balance_cents INTEGER NOT NULL DEFAULT 0, -- virtual cash from withdrawals
+
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -27,7 +29,7 @@ CREATE TABLE IF NOT EXISTS kyc_submissions (
   address      TEXT NOT NULL,
   id_doc_type  TEXT NOT NULL,
   id_doc_ref   TEXT NOT NULL,               -- filename reference only; nothing verified
-  status       TEXT NOT NULL DEFAULT 'approved'
+  status       TEXT NOT NULL DEFAULT 'pending'
                  CHECK (status IN ('pending','approved','rejected')),
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );

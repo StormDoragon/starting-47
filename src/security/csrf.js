@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const config = require('../config');
 
 /**
  * Double-submit-cookie CSRF protection. A random token is stored in the session
@@ -16,11 +17,12 @@ function issueToken(req, res) {
   if (!req.session.csrfToken) {
     req.session.csrfToken = crypto.randomBytes(24).toString('hex');
   }
-  // Readable by client JS so fetch() can send it as a header.
+  // Readable by client JS so fetch() can send it as a header. Secure only in
+  // production — a Secure cookie set over plain HTTP is silently dropped.
   res.cookie(COOKIE, req.session.csrfToken, {
     httpOnly: false,
     sameSite: 'lax',
-    secure: req.app.get('trust proxy') ? true : req.secure,
+    secure: config.isProd,
     path: '/',
   });
   return req.session.csrfToken;
@@ -33,10 +35,13 @@ function middleware(req, res, next) {
 
   if (SAFE.has(req.method)) return next();
 
-  const submitted =
+  const raw =
     (req.body && req.body._csrf) ||
     req.get('x-csrf-token') ||
     req.get('x-xsrf-token');
+  // Coerce to a plain string so a crafted duplicate field (array) can't make
+  // Buffer.from throw.
+  const submitted = typeof raw === 'string' ? raw : '';
 
   const expected = req.session && req.session.csrfToken;
   if (

@@ -8,12 +8,42 @@ const crypto = require('crypto');
  * so the same build runs in a demo container and behind HTTPS in production.
  */
 const isProd = process.env.NODE_ENV === 'production';
+const isVercel = process.env.VERCEL === '1';
+
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  if (isProd && !isVercel) {
+    throw new Error('SESSION_SECRET is required in production.');
+  }
+
+  sessionSecret = crypto.randomBytes(32).toString('hex');
+  if (isProd && isVercel) {
+    console.warn(
+      'SESSION_SECRET is not set; using an ephemeral per-instance secret. ' +
+        'Set SESSION_SECRET in Vercel for stable sessions.',
+    );
+  }
+}
+
+function positiveNumber(name, defaultValue, { integer = false, min = 1 } = {}) {
+  const raw = process.env[name];
+  if (raw == null || raw === '') return defaultValue;
+
+  const value = Number(raw);
+  const valid = Number.isFinite(value) && value >= min && (!integer || Number.isInteger(value));
+  if (!valid) {
+    throw new Error(`${name} must be ${integer ? 'an integer' : 'a number'} greater than or equal to ${min}.`);
+  }
+  return value;
+}
 
 const config = {
   env: process.env.NODE_ENV || 'development',
   isProd,
-  port: Number(process.env.PORT) || 3000,
+  isVercel,
+  port: positiveNumber('PORT', 3000, { integer: true }),
   host: process.env.HOST || '0.0.0.0',
+  trustProxy: isProd ? positiveNumber('TRUST_PROXY_HOPS', 1, { integer: true, min: 0 }) : false,
 
   // Brand
   brand: {
@@ -27,6 +57,7 @@ const config = {
   // Product terms (mock)
   terms: {
     minDeposit: 1200, // USD
+    maxDeposit: 1000000, // USD per pool, per deposit (demo guardrail)
     lockYears: 3,
     currency: 'USD',
     // Early-withdrawal penalty schedule by completed years held.
@@ -38,10 +69,19 @@ const config = {
     managementFeePct: 0.015, // 1.5% annual (illustrative)
   },
 
+  demo: {
+    autoApproveKyc:
+      process.env.DEMO_AUTO_APPROVE_KYC == null
+        ? !isProd
+        : process.env.DEMO_AUTO_APPROVE_KYC === 'true',
+  },
+
   // Session / crypto
   session: {
-    // A stable-but-random secret for the demo; set SESSION_SECRET in prod.
-    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    // A stable secret is required for durable sessions. Vercel demo deploys
+    // can still boot without one, but sessions may reset between cold starts
+    // until SESSION_SECRET is configured in the project dashboard.
+    secret: sessionSecret,
     cookieName: 'meridian.sid',
     maxAgeMs: 1000 * 60 * 60 * 8, // 8 hours
   },
@@ -49,15 +89,20 @@ const config = {
   db: {
     file:
       process.env.DB_FILE ||
-      path.join(__dirname, '..', 'data', 'meridian.db'),
+      (isProd ? '/tmp/meridian.db' : path.join(__dirname, '..', 'data', 'meridian.db')),
   },
 
   // Simulated performance engine
   engine: {
     // How often the live engine appends a new tick to open positions.
-    tickIntervalMs: Number(process.env.TICK_INTERVAL_MS) || 5000,
+    tickIntervalMs: positiveNumber('TICK_INTERVAL_MS', 5000, { integer: true }),
     // Days of history to backfill when a position is opened.
-    backfillDays: Number(process.env.BACKFILL_DAYS) || 120,
+    backfillDays: positiveNumber('BACKFILL_DAYS', 120, { integer: true }),
+    // How much faster simulated market time runs than wall-clock time. Live
+    // ticks apply the fraction of a trading day that elapsed × this factor,
+    // so values move visibly in a demo without compounding a full day's
+    // return every few seconds.
+    simSpeed: positiveNumber('SIM_SPEED', 360),
   },
 
   security: {

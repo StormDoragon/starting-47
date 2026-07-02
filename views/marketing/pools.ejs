@@ -20,11 +20,11 @@
             <span class="pill" style="color:<%= p.accent %>;border-color:<%= p.accent %>55"><span class="dot"></span><%= p.risk_profile %></span>
           </div>
           <p class="mt-2"><%= p.description %></p>
-          <canvas class="chart" data-render="line" data-src="chart-<%= p.slug %>" style="height:120px"></canvas>
+          <canvas class="chart" data-render="line" data-src="chart-<%= p.slug %>" style="height:120px" role="img" aria-label="<%= p.name %> simulated index, last 180 days"></canvas>
           <div class="grid grid-3 mt-2" style="gap:12px">
             <div>
               <div class="tiny text-muted">Target range</div>
-              <div class="mono" style="color:<%= p.accent %>"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</div>
+              <div class="mono"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</div>
             </div>
             <div>
               <div class="tiny text-muted">Volatility</div>

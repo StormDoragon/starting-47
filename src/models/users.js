@@ -50,6 +50,13 @@ function setTotp(userId, { secret, enabled }) {
   ).run(secret ?? null, enabled ? 1 : 0, userId);
 }
 
+/** Credit (or with a negative amount, debit) the virtual cash balance. */
+function creditCash(userId, cents) {
+  db.prepare(
+    "UPDATE users SET cash_balance_cents = cash_balance_cents + ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(Math.round(cents), userId);
+}
+
 module.exports = {
   create,
   byEmail: (email) => byEmail.get(String(email || '').toLowerCase().trim()),
@@ -58,5 +65,6 @@ module.exports = {
   setPassword,
   setKycStatus,
   setTotp,
+  creditCash,
   touch: (id) => touch.run(id),
 };

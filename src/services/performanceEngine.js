@@ -20,10 +20,15 @@ const positionsModel = require('../models/positions');
 const ticksModel = require('../models/ticks');
 const poolsModel = require('../models/pools');
 
-/** One geometric-Brownian-motion step (with optional jump) as a multiplier. */
-function stepMultiplier(pool, rng = Math.random) {
-  let logRet = pool.drift_daily + pool.vol_daily * gaussian(rng);
-  if (pool.jump_prob > 0 && rng() < pool.jump_prob) {
+/**
+ * One geometric-Brownian-motion step (with optional jump) as a multiplier.
+ * `dayFraction` scales the step to a fraction of a trading day: drift scales
+ * linearly, volatility with √t, and the jump hazard linearly.
+ */
+function stepMultiplier(pool, rng = Math.random, dayFraction = 1) {
+  let logRet =
+    pool.drift_daily * dayFraction + pool.vol_daily * Math.sqrt(dayFraction) * gaussian(rng);
+  if (pool.jump_prob > 0 && rng() < pool.jump_prob * dayFraction) {
     // Mostly-upward event jumps for the growth pool.
     logRet += pool.jump_scale * (0.5 + rng());
   }
@@ -57,13 +62,20 @@ function backfillPosition(position) {
   return rows.length;
 }
 
-/** Append a single fresh tick to a position, based on its latest value. */
-function tickPosition(position) {
+/**
+ * Append a single fresh live tick to a position, based on its latest value.
+ * The step covers the simulated time that elapsed since the last tick
+ * (wall-clock elapsed × simSpeed), capped at one trading day — longer gaps
+ * are the catch-up job's business.
+ */
+function tickPosition(position, now = Date.now()) {
   const pool = poolsModel.byId(position.pool_id);
   const latest = ticksModel.latest(position.id);
   const base = latest ? latest.value_cents : position.principal_cents;
-  const next = Math.max(1, Math.round(base * stepMultiplier(pool)));
-  ticksModel.add(position.id, new Date().toISOString(), next);
+  const elapsedMs = latest ? Math.max(0, now - new Date(latest.ts).getTime()) : 0;
+  const dayFraction = Math.min(1, (elapsedMs * config.engine.simSpeed) / DAY_MS) || 1 / 86400;
+  const next = Math.max(1, Math.round(base * stepMultiplier(pool, Math.random, dayFraction)));
+  ticksModel.add(position.id, new Date(now).toISOString(), next);
   return next;
 }
 
@@ -73,9 +85,42 @@ function tickAll() {
   return active.length;
 }
 
+/**
+ * Fill the gap between a position's last stored tick and now with daily ticks,
+ * so charts have no flat holes after the server has been offline for a while.
+ */
+function catchUpPosition(position, now = Date.now()) {
+  const pool = poolsModel.byId(position.pool_id);
+  const latest = ticksModel.latest(position.id);
+  if (!latest) return 0;
+  let ts = new Date(latest.ts).getTime();
+  let value = latest.value_cents;
+  const rows = [];
+  while (now - ts > DAY_MS) {
+    ts += DAY_MS;
+    value = Math.max(1, Math.round(value * stepMultiplier(pool)));
+    rows.push({ positionId: position.id, ts: new Date(ts).toISOString(), valueCents: value });
+  }
+  if (rows.length) ticksModel.addMany(rows);
+  return rows.length;
+}
+
+function catchUpAll() {
+  const active = positionsModel.allActive();
+  let added = 0;
+  for (const p of active) added += catchUpPosition(p);
+  return added;
+}
+
 let timer = null;
 function start() {
   if (timer) return;
+  try {
+    const added = catchUpAll();
+    if (added > 0) console.log(`performance engine: backfilled ${added} missed daily tick(s)`);
+  } catch (err) {
+    console.error('performance engine catch-up failed:', err.message);
+  }
   timer = setInterval(() => {
     try {
       tickAll();
@@ -118,6 +163,8 @@ module.exports = {
   backfillPosition,
   tickPosition,
   tickAll,
+  catchUpPosition,
+  catchUpAll,
   start,
   stop,
   syntheticPoolSeries,
