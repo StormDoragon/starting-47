@@ -14,8 +14,9 @@ const byUser = db.prepare(
 
 function create(data) {
   const id = newId('kyc');
-  // Demo: submissions are auto-approved. Nothing is verified against a real service.
-  insert.run({ id, status: 'approved', ...data });
+  // Demo submissions may be auto-approved by configuration; otherwise they stay
+  // pending for review by whatever production workflow is added later.
+  insert.run({ id, status: data.status || 'pending', ...data });
   return byUser.get(data.user_id);
 }
 

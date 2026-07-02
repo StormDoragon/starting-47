@@ -59,11 +59,21 @@ router.post('/onboarding', sensitiveLimiter, (req, res, next) => {
   }
 
   try {
-    kycModel.create({ user_id: req.user.id, ...form });
-    usersModel.setKycStatus(req.user.id, 'approved');
-    audit.log(req.user.id, 'kyc.submitted', 'auto-approved (demo)', req);
-    req.flash('success', 'Identity verified (auto-approved for this demo). You can now fund your account.');
-    res.redirect('/portal/deposit');
+    const status = config.demo.autoApproveKyc ? 'approved' : 'pending';
+    kycModel.create({ user_id: req.user.id, status, ...form });
+    usersModel.setKycStatus(req.user.id, status);
+    audit.log(
+      req.user.id,
+      'kyc.submitted',
+      config.demo.autoApproveKyc ? 'auto-approved (demo)' : 'pending review',
+      req,
+    );
+    if (config.demo.autoApproveKyc) {
+      req.flash('success', 'Identity verified (auto-approved for this demo). You can now fund your account.');
+      return res.redirect('/portal/deposit');
+    }
+    req.flash('success', 'Identity verification submitted. We will notify you when review is complete.');
+    res.redirect('/portal/onboarding');
   } catch (err) {
     next(err);
   }

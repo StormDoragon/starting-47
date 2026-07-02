@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS kyc_submissions (
   address      TEXT NOT NULL,
   id_doc_type  TEXT NOT NULL,
   id_doc_ref   TEXT NOT NULL,               -- filename reference only; nothing verified
-  status       TEXT NOT NULL DEFAULT 'approved'
+  status       TEXT NOT NULL DEFAULT 'pending'
                  CHECK (status IN ('pending','approved','rejected')),
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
