@@ -8,9 +8,21 @@ const crypto = require('crypto');
  * so the same build runs in a demo container and behind HTTPS in production.
  */
 const isProd = process.env.NODE_ENV === 'production';
+const isVercel = process.env.VERCEL === '1';
 
-if (isProd && !process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET is required in production.');
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  if (isProd && !isVercel) {
+    throw new Error('SESSION_SECRET is required in production.');
+  }
+
+  sessionSecret = crypto.randomBytes(32).toString('hex');
+  if (isProd && isVercel) {
+    console.warn(
+      'SESSION_SECRET is not set; using an ephemeral per-instance secret. ' +
+        'Set SESSION_SECRET in Vercel for stable sessions.',
+    );
+  }
 }
 
 function positiveNumber(name, defaultValue, { integer = false, min = 1 } = {}) {
@@ -28,6 +40,7 @@ function positiveNumber(name, defaultValue, { integer = false, min = 1 } = {}) {
 const config = {
   env: process.env.NODE_ENV || 'development',
   isProd,
+  isVercel,
   port: positiveNumber('PORT', 3000, { integer: true }),
   host: process.env.HOST || '0.0.0.0',
   trustProxy: isProd ? positiveNumber('TRUST_PROXY_HOPS', 1, { integer: true, min: 0 }) : false,
@@ -65,8 +78,10 @@ const config = {
 
   // Session / crypto
   session: {
-    // A stable-but-random secret for the demo; set SESSION_SECRET in prod.
-    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    // A stable secret is required for durable sessions. Vercel demo deploys
+    // can still boot without one, but sessions may reset between cold starts
+    // until SESSION_SECRET is configured in the project dashboard.
+    secret: sessionSecret,
     cookieName: 'meridian.sid',
     maxAgeMs: 1000 * 60 * 60 * 8, // 8 hours
   },
