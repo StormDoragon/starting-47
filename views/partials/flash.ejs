@@ -1,0 +1,9 @@
+<% if (flash && flash.length) { %>
+  <div class="flash-stack">
+    <% flash.forEach(function(f){ %>
+      <div class="flash flash-<%= f.type === 'success' ? 'success' : (f.type === 'error' ? 'error' : 'info') %>">
+        <span><%= f.message %></span>
+      </div>
+    <% }) %>
+  </div>
+<% } %>

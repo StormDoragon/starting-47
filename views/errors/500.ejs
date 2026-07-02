@@ -1,0 +1,2 @@
+<% var code = 500, heading = (typeof title !== 'undefined' && title) ? title : 'Something went wrong', msg = (typeof message !== 'undefined' && message) ? message : 'An unexpected error occurred. Please try again.'; %>
+<%- include('error', { code: code, heading: heading, message: msg }) %>

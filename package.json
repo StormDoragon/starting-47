@@ -1,0 +1,31 @@
+{
+  "name": "meridian-capital-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Meridian Capital — a portfolio/demo investment & forex platform (simulation only; no real funds are processed).",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node src/db/seed.js",
+    "reset": "node src/db/reset.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "compression": "^1.7.5",
+    "cookie-parser": "^1.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0"
+  }
+}

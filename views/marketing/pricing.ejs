@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container">
+    <div class="narrow text-center">
+      <span class="eyebrow" style="justify-content:center">Pricing &amp; terms</span>
+      <h1>Transparent, simple, simulated</h1>
+      <p class="lead">One account type. One clear fee. Everything below is illustrative for this demo.</p>
+    </div>
+
+    <div class="grid grid-2 mt-4" style="align-items:start">
+      <div class="card card-pad" style="border-color:rgba(216,178,90,0.3)">
+        <span class="pill pill-gold"><span class="dot"></span>Managed portfolio account</span>
+        <div class="flex items-end gap mt-2">
+          <div style="font-family:var(--font-serif);font-size:3rem;line-height:1"><%= money.formatCents0(terms.minDeposit*100) %></div>
+          <div class="text-muted mb-1">minimum deposit</div>
+        </div>
+        <hr class="divider" />
+        <table class="table">
+          <tbody>
+            <tr><td class="text-muted">Minimum deposit</td><td class="text-right mono"><%= money.formatCents0(terms.minDeposit*100) %></td></tr>
+            <tr><td class="text-muted">Lock term</td><td class="text-right"><%= terms.lockYears %> years</td></tr>
+            <tr><td class="text-muted">Management fee</td><td class="text-right mono"><%= (terms.managementFeePct*100).toFixed(1) %>% / yr</td></tr>
+            <tr><td class="text-muted">Pools available</td><td class="text-right">4 (split freely)</td></tr>
+            <tr><td class="text-muted">Deposit methods</td><td class="text-right">Card · Bank · Crypto <span class="tiny text-muted">(mock)</span></td></tr>
+          </tbody>
+        </table>
+        <a href="/register" class="btn btn-primary btn-block mt-2">Open an account</a>
+      </div>
+
+      <div class="card card-pad">
+        <h3>Early-withdrawal penalty schedule</h3>
+        <p class="small">Withdrawing before the <%= terms.lockYears %>-year maturity applies a penalty on the position value, disclosed and confirmed before any request. After maturity, withdrawals are penalty-free.</p>
+        <table class="table">
+          <thead><tr><th>If withdrawn during</th><th class="text-right">Penalty</th></tr></thead>
+          <tbody>
+            <% terms.penaltySchedule.forEach(function(t){ %>
+              <tr><td><%= t.label %> of the term</td><td class="text-right mono text-down"><%= (t.penaltyPct*100).toFixed(0) %>%</td></tr>
+            <% }) %>
+            <tr><td>After maturity</td><td class="text-right mono text-up">0%</td></tr>
+          </tbody>
+        </table>
+        <hr class="divider" />
+        <h3>What’s included</h3>
+        <ul class="text-muted small" style="padding-left:18px">
+          <li>Real-time simulated portfolio tracking</li>
+          <li>Per-pool and combined performance charts</li>
+          <li>Transaction history &amp; maturity countdown</li>
+          <li>Two-factor authentication &amp; session controls</li>
+        </ul>
+        <div class="disclaimer-strong mt-2">All pricing, fees and penalties are illustrative. No real funds are processed.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,2 @@
+<% var code = 403, heading = (typeof title !== 'undefined' && title) ? title : 'Security check failed', msg = (typeof message !== 'undefined' && message) ? message : 'Your request could not be verified. Please reload and try again.'; %>
+<%- include('error', { code: code, heading: heading, message: msg }) %>

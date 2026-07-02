@@ -1,0 +1,24 @@
+<%- include('head') %>
+<div class="portal-shell">
+  <aside class="portal-side">
+    <a href="/" class="brand"><span class="mark"></span><%= brand.name %></a>
+    <nav class="portal-nav">
+      <a href="/portal" class="<%= path === '/portal' ? 'active' : '' %>"><%- include('icon', { name: 'chart', size: 18 }) %> Dashboard</a>
+      <a href="/portal/deposit" class="<%= path === '/portal/deposit' ? 'active' : '' %>"><%- include('icon', { name: 'wallet', size: 18 }) %> Deposit</a>
+      <a href="/portal/withdraw" class="<%= path === '/portal/withdraw' ? 'active' : '' %>"><%- include('icon', { name: 'arrowDown', size: 18 }) %> Withdraw</a>
+      <a href="/portal/settings" class="<%= path === '/portal/settings' ? 'active' : '' %>"><%- include('icon', { name: 'settings', size: 18 }) %> Security</a>
+    </nav>
+    <div class="side-user">
+      <div class="avatar"><%= (currentUser.displayName || currentUser.email || 'U').trim().charAt(0).toUpperCase() %></div>
+      <div style="min-width:0">
+        <div class="small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= currentUser.displayName || 'Investor' %></div>
+        <div class="tiny text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= currentUser.email %></div>
+      </div>
+    </div>
+    <form method="post" action="/logout" class="mt-1">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-ghost btn-block btn-sm" type="submit"><%- include('icon', { name: 'logout', size: 16 }) %> Log out</button>
+    </form>
+    <p class="tiny text-muted mt-2" style="line-height:1.4"><%= brand.disclaimer %></p>
+  </aside>
+  <main class="portal-main">

@@ -1,0 +1,32 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container" style="max-width:460px">
+    <div class="card card-pad">
+      <div class="text-center mb-2">
+        <span class="eyebrow" style="justify-content:center">Welcome back</span>
+        <h2 class="mb-0">Log in to your portfolio</h2>
+      </div>
+      <%- include('../partials/flash') %>
+      <% if (errors.form) { %><div class="flash flash-error mb-2"><span><%= errors.form %></span></div><% } %>
+      <form method="post" action="/login" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <input type="hidden" name="next" value="<%= next || '' %>" />
+        <div class="field">
+          <label for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" value="<%= form.email || '' %>" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Log in</button>
+      </form>
+      <p class="small text-center mt-2">New to <%= brand.name %>? <a href="/register">Open an account</a></p>
+    </div>
+    <p class="tiny text-muted text-center mt-2"><%= brand.disclaimer %></p>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

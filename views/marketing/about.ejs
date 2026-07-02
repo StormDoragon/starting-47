@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container">
+    <div class="narrow text-center">
+      <span class="eyebrow" style="justify-content:center">About · legal · contact</span>
+      <h1>A design showcase for a modern investment brand</h1>
+      <p class="lead"><%= brand.name %> is a portfolio/demo build — a fully-designed marketing site and investor portal that behaves like a global broker, without being one.</p>
+    </div>
+
+    <div class="grid grid-2 mt-4" style="align-items:start">
+      <div class="card card-pad">
+        <h3>About</h3>
+        <p><%= brand.name %> was built to demonstrate end-to-end product design and engineering: a polished marketing frontend, a secure authenticated portal, and a live simulated performance engine driving every number on the dashboard.</p>
+        <p>The brand name, badges and figures are placeholders. Swap them freely — the value is in the flows, the design system and the security-conscious architecture underneath.</p>
+      </div>
+      <div class="card card-pad" id="contact">
+        <h3>Contact</h3>
+        <p class="small">This is a demonstration brand, so the details below are illustrative.</p>
+        <table class="table">
+          <tbody>
+            <tr><td class="text-muted">General</td><td class="text-right">hello@meridian.example</td></tr>
+            <tr><td class="text-muted">Support</td><td class="text-right">support@meridian.example</td></tr>
+            <tr><td class="text-muted">Press</td><td class="text-right">press@meridian.example</td></tr>
+            <tr><td class="text-muted">Registered office</td><td class="text-right">— (demo)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-pad mt-3" id="legal" style="border-color:rgba(216,178,90,0.3)">
+      <h2>Legal &amp; disclaimers</h2>
+      <div class="disclaimer-strong" style="font-size:0.95rem"><%= brand.disclaimer %></div>
+      <div class="grid grid-2 mt-2" style="gap:24px">
+        <div>
+          <h4>Not an offer or solicitation</h4>
+          <p class="small">Nothing on this site is an offer, solicitation, or recommendation to buy or sell any security or to make any investment. No advisory relationship is created.</p>
+          <h4>No real funds or custody</h4>
+          <p class="small">There are no real payment rails, no custody of assets, and no real investment products. “Deposits” credit a virtual balance only.</p>
+        </div>
+        <div>
+          <h4>Illustrative figures &amp; badges</h4>
+          <p class="small">All performance, target ranges, fees, penalties and “regulated/audited” badges are illustrative and generated for demonstration. They do not represent any real entity, licence, certification or track record.</p>
+          <h4>Simulated identity verification</h4>
+          <p class="small">The onboarding “KYC” flow collects information and auto-approves for demo purposes. It verifies nothing against any real identity, sanctions or AML service.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

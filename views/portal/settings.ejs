@@ -1,0 +1,125 @@
+<%- include('../partials/portal-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Security &amp; settings</span>
+    <h1>Account security</h1>
+  </div>
+  <span class="pill <%= currentUser.totpEnabled ? 'pill-up' : 'pill-info' %>"><span class="dot"></span>2FA <%= currentUser.totpEnabled ? 'enabled' : 'off' %></span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<div class="grid grid-2" style="align-items:start">
+  <!-- Password -->
+  <div class="card card-pad">
+    <h3><%- include('../partials/icon', { name: 'key', size: 18 }) %> Change password</h3>
+    <form method="post" action="/portal/settings/password" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <div class="field">
+        <label for="current">Current password</label>
+        <input class="input <%= passwordErrors.current ? 'input-err' : '' %>" id="current" name="current" type="password" autocomplete="current-password" required />
+        <% if (passwordErrors.current) { %><div class="field-error"><%= passwordErrors.current %></div><% } %>
+      </div>
+      <div class="field">
+        <label for="new">New password</label>
+        <input class="input <%= passwordErrors.new ? 'input-err' : '' %>" id="new" name="new" type="password" autocomplete="new-password" required />
+        <div class="hint">At least 10 characters, using 3 of: lowercase, uppercase, numbers, symbols.</div>
+        <% if (passwordErrors.new) { %><div class="field-error"><%= passwordErrors.new %></div><% } %>
+      </div>
+      <div class="field">
+        <label for="confirm">Confirm new password</label>
+        <input class="input <%= passwordErrors.confirm ? 'input-err' : '' %>" id="confirm" name="confirm" type="password" autocomplete="new-password" required />
+        <% if (passwordErrors.confirm) { %><div class="field-error"><%= passwordErrors.confirm %></div><% } %>
+      </div>
+      <button class="btn btn-primary" type="submit">Update password</button>
+    </form>
+  </div>
+
+  <!-- Two-factor -->
+  <div class="card card-pad">
+    <h3><%- include('../partials/icon', { name: 'lock', size: 18 }) %> Two-factor authentication</h3>
+    <% if (currentUser.totpEnabled) { %>
+      <p class="small"><span class="text-up">Enabled.</span> You’ll be asked for a 6-digit code from your authenticator app at login.</p>
+      <form method="post" action="/portal/settings/2fa/disable" data-confirm="Disable two-factor authentication?">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="field">
+          <label for="pw2">Confirm with your password to disable</label>
+          <input class="input" id="pw2" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn btn-ghost" type="submit">Disable 2FA</button>
+      </form>
+    <% } else if (twofa) { %>
+      <p class="small">Scan this QR code with Google Authenticator, Authy, or any TOTP app, then enter the 6-digit code to finish.</p>
+      <% if (twofa.error) { %><div class="flash flash-error mb-2"><span><%= twofa.error %></span></div><% } %>
+      <% if (twofa.qrDataUrl) { %>
+        <div class="text-center mb-2"><img src="<%= twofa.qrDataUrl %>" alt="TOTP QR code" width="200" height="200" style="border-radius:12px;background:#fff;padding:8px" /></div>
+      <% } %>
+      <div class="field">
+        <label>Manual entry key</label>
+        <div class="input mono" style="user-select:all;font-size:0.82rem;word-break:break-all"><%= twofa.base32 %></div>
+      </div>
+      <form method="post" action="/portal/settings/2fa/enable" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="field">
+          <label for="token">Enter the 6-digit code</label>
+          <input class="input mono" id="token" name="token" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:0.3em" required />
+        </div>
+        <button class="btn btn-primary" type="submit">Verify &amp; enable</button>
+      </form>
+    <% } else { %>
+      <p class="small">Add a second layer of protection with a time-based one-time code (TOTP).</p>
+      <form method="post" action="/portal/settings/2fa/setup">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button class="btn btn-primary" type="submit">Enable 2FA</button>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<!-- Active sessions -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'user', size: 18 }) %> Active sessions</h3>
+<div class="card" style="overflow:hidden">
+  <table class="table">
+    <thead><tr><th>Device / agent</th><th>IP</th><th>Last seen</th><th class="text-right">Action</th></tr></thead>
+    <tbody>
+      <% sessions.forEach(function(s){ %>
+        <tr>
+          <td class="small"><%= (s.user_agent || 'Unknown').slice(0, 60) %><% if (s.current) { %> <span class="pill pill-up" style="padding:2px 8px">this session</span><% } %></td>
+          <td class="small mono text-muted"><%= s.ip || '—' %></td>
+          <td class="small text-muted"><%= time.formatDateTime(s.last_seen) %></td>
+          <td class="text-right">
+            <% if (!s.current) { %>
+              <form method="post" action="/portal/settings/sessions/revoke" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <input type="hidden" name="sid" value="<%= s.sid %>" />
+                <button class="btn btn-ghost btn-sm" type="submit">Revoke</button>
+              </form>
+            <% } else { %><span class="tiny text-muted">—</span><% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Activity log -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'clock', size: 18 }) %> Security activity log</h3>
+<div class="card" style="overflow:hidden">
+  <table class="table">
+    <thead><tr><th>Event</th><th>Detail</th><th>IP</th><th class="text-right">When</th></tr></thead>
+    <tbody>
+      <% if (!activity.length) { %><tr><td colspan="4" class="text-muted text-center" style="padding:20px">No activity recorded yet.</td></tr><% } %>
+      <% activity.forEach(function(a){ %>
+        <tr>
+          <td><span class="mono small"><%= a.event %></span></td>
+          <td class="small text-muted"><%= a.detail || '—' %></td>
+          <td class="small mono text-muted"><%= a.ip || '—' %></td>
+          <td class="text-right small text-muted"><%= time.formatDateTime(a.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/portal-foot') %>

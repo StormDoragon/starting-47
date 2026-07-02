@@ -1,0 +1,50 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container">
+    <div class="narrow text-center">
+      <span class="eyebrow" style="justify-content:center">Investment pools</span>
+      <h1>Four pools, one disciplined portfolio</h1>
+      <p class="lead">Diversify a single deposit across distinct asset classes. All performance shown is simulated for demonstration.</p>
+    </div>
+
+    <div class="grid grid-2 mt-4">
+      <% pools.forEach(function(p, i){ %>
+        <div class="card card-pad card-hover">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-sm">
+              <span class="swatch" style="width:14px;height:14px;border-radius:4px;background:<%= p.accent %>"></span>
+              <h3 class="mb-0"><%= p.name %></h3>
+            </div>
+            <span class="pill" style="color:<%= p.accent %>;border-color:<%= p.accent %>55"><span class="dot"></span><%= p.risk_profile %></span>
+          </div>
+          <p class="mt-2"><%= p.description %></p>
+          <canvas class="chart" data-render="line" data-src="chart-<%= p.slug %>" style="height:120px"></canvas>
+          <div class="grid grid-3 mt-2" style="gap:12px">
+            <div>
+              <div class="tiny text-muted">Target range</div>
+              <div class="mono" style="color:<%= p.accent %>"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</div>
+            </div>
+            <div>
+              <div class="tiny text-muted">Volatility</div>
+              <div class="mono"><%= (p.vol_daily*100).toFixed(2) %>%/day</div>
+            </div>
+            <div>
+              <div class="tiny text-muted">Risk</div>
+              <div class="mono risk-<%= p.risk_profile.split(' ')[0] %>"><%= p.risk_profile %></div>
+            </div>
+          </div>
+          <a href="/pools/<%= p.slug %>" class="btn btn-ghost btn-block mt-3">Explore <%= p.name %> →</a>
+        </div>
+      <% }) %>
+    </div>
+
+    <p class="text-center tiny text-muted mt-3">Target return ranges are illustrative and do not constitute a forecast, guarantee, or promise of performance.</p>
+  </div>
+</section>
+
+<% charts.forEach(function(c){ %>
+<script type="application/json" id="chart-<%= c.slug %>"><%- JSON.stringify(c) %></script>
+<% }) %>
+<%- include('../partials/footer', { scripts: ['/js/charts.js'] }) %>

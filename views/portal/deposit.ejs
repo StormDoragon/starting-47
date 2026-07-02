@@ -1,0 +1,82 @@
+<%- include('../partials/portal-head') %>
+<% var amounts = (form && form.amounts) || {}; var method = (form && form.method) || 'card'; %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Fund your account</span>
+    <h1>Make a deposit</h1>
+  </div>
+  <a href="/portal" class="btn btn-ghost btn-sm">← Back to dashboard</a>
+</div>
+
+<%- include('../partials/flash') %>
+<% if (errors.form) { %><div class="flash flash-error mb-2"><span><%= errors.form %></span></div><% } %>
+
+<form method="post" action="/portal/deposit" data-deposit-form data-min-cents="<%= terms.minDeposit*100 %>" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+  <div class="grid grid-2" style="align-items:start">
+    <div class="card card-pad">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="mb-0">Allocate across pools</h3>
+        <button type="button" class="btn btn-ghost btn-sm" data-split-even>Split evenly</button>
+      </div>
+      <p class="small">Enter an amount for one or more pools. Your total must be at least <strong><%= money.formatCents0(terms.minDeposit*100) %></strong>.</p>
+
+      <% pools.forEach(function(p){ %>
+        <div class="field">
+          <label for="amount_<%= p.id %>">
+            <span class="flex items-center gap-sm">
+              <span class="swatch" style="width:11px;height:11px;border-radius:3px;background:<%= p.accent %>"></span>
+              <%= p.name %>
+              <span class="pill" style="color:<%= p.accent %>;border-color:<%= p.accent %>55;padding:2px 8px"><%= p.risk_profile %></span>
+            </span>
+          </label>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--faint)">$</span>
+            <input class="input mono" style="padding-left:26px" id="amount_<%= p.id %>" name="amount_<%= p.id %>"
+                   inputmode="decimal" placeholder="0.00" value="<%= amounts[p.id] || '' %>" data-alloc-input />
+          </div>
+        </div>
+      <% }) %>
+
+      <hr class="divider" />
+      <div class="flex justify-between items-center">
+        <span class="text-muted">Total deposit</span>
+        <span class="mono" style="font-size:1.4rem" data-alloc-total>$0.00</span>
+      </div>
+      <div class="text-right"><span data-alloc-note class="small text-muted"></span></div>
+    </div>
+
+    <div class="card card-pad">
+      <h3>Payment method</h3>
+      <p class="small">All methods are simulated — no real payment is processed.</p>
+      <div class="choice-grid">
+        <% var methods = [
+             {v:'card', t:'Card', s:'Visa · Mastercard'},
+             {v:'bank', t:'Bank transfer', s:'ACH · SEPA · Wire'},
+             {v:'crypto', t:'Crypto', s:'BTC · ETH · USDC'} ]; %>
+        <% methods.forEach(function(m){ %>
+          <label class="choice">
+            <input type="radio" name="method" value="<%= m.v %>" <%= method===m.v ? 'checked' : '' %> />
+            <span class="choice-body">
+              <span class="choice-title"><%= m.t %></span>
+              <span class="choice-sub"><%= m.s %></span>
+            </span>
+          </label>
+        <% }) %>
+      </div>
+
+      <div class="card" style="background:var(--bg-1);border-color:var(--line);padding:16px;margin-top:18px">
+        <div class="flex justify-between small"><span class="text-muted">Lock term</span><span><%= terms.lockYears %> years</span></div>
+        <div class="flex justify-between small mt-1"><span class="text-muted">Management fee</span><span class="mono"><%= (terms.managementFeePct*100).toFixed(1) %>% / yr</span></div>
+        <div class="flex justify-between small mt-1"><span class="text-muted">Funds settle</span><span class="text-up">Instantly (simulated)</span></div>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg mt-3" type="submit">Confirm deposit →</button>
+      <p class="tiny text-muted text-center mt-1"><%= brand.disclaimer %></p>
+    </div>
+  </div>
+</form>
+
+<%- include('../partials/portal-foot') %>
