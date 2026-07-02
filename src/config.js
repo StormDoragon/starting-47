@@ -27,6 +27,7 @@ const config = {
   // Product terms (mock)
   terms: {
     minDeposit: 1200, // USD
+    maxDeposit: 1000000, // USD per pool, per deposit (demo guardrail)
     lockYears: 3,
     currency: 'USD',
     // Early-withdrawal penalty schedule by completed years held.
@@ -58,6 +59,11 @@ const config = {
     tickIntervalMs: Number(process.env.TICK_INTERVAL_MS) || 5000,
     // Days of history to backfill when a position is opened.
     backfillDays: Number(process.env.BACKFILL_DAYS) || 120,
+    // How much faster simulated market time runs than wall-clock time. Live
+    // ticks apply the fraction of a trading day that elapsed × this factor,
+    // so values move visibly in a demo without compounding a full day's
+    // return every few seconds.
+    simSpeed: Number(process.env.SIM_SPEED) || 360,
   },
 
   security: {

@@ -20,12 +20,12 @@
         <div>
           <div class="tiny text-muted" style="text-transform:uppercase;letter-spacing:.12em">Simulated index · last 12 months</div>
           <div style="font-family:var(--font-serif);font-size:1.6rem">Base 100 →
-            <span class="mono" style="color:<%= pool.accent %>"><%= chart.points[chart.points.length-1].toFixed(1) %></span>
+            <span class="mono"><%= chart.points[chart.points.length-1].toFixed(1) %></span>
           </div>
         </div>
         <span class="pill" style="color:<%= pool.accent %>;border-color:<%= pool.accent %>55"><span class="dot"></span>Target <%= pool.target_low_pct %>–<%= pool.target_high_pct %>% / yr</span>
       </div>
-      <canvas class="chart" data-render="line" data-src="detail-chart" style="height:260px"></canvas>
+      <canvas class="chart" data-render="line" data-src="detail-chart" style="height:260px" role="img" aria-label="<%= pool.name %> simulated index over the last 12 months, base 100"></canvas>
     </div>
 
     <div class="grid grid-2 mt-3" style="align-items:start">
@@ -42,7 +42,7 @@
           <tbody>
             <tr><td class="text-muted">Asset class</td><td class="text-right"><%= pool.name %></td></tr>
             <tr><td class="text-muted">Risk rating</td><td class="text-right risk-<%= pool.risk_profile.split(' ')[0] %>"><%= pool.risk_profile %></td></tr>
-            <tr><td class="text-muted">Illustrative target</td><td class="text-right mono" style="color:<%= pool.accent %>"><%= pool.target_low_pct %>–<%= pool.target_high_pct %>%</td></tr>
+            <tr><td class="text-muted">Illustrative target</td><td class="text-right mono"><%= pool.target_low_pct %>–<%= pool.target_high_pct %>%</td></tr>
             <tr><td class="text-muted">Daily volatility</td><td class="text-right mono"><%= (pool.vol_daily*100).toFixed(2) %>%</td></tr>
             <tr><td class="text-muted">Lock term</td><td class="text-right"><%= terms.lockYears %> years</td></tr>
             <tr><td class="text-muted">Minimum (blended)</td><td class="text-right mono"><%= money.formatCents0(terms.minDeposit*100) %></td></tr>
@@ -54,5 +54,5 @@
   </div>
 </section>
 
-<script type="application/json" id="detail-chart"><%- JSON.stringify({ color: pool.accent, axis: true, points: chart.points }) %></script>
+<script type="application/json" id="detail-chart"><%- JSON.stringify({ color: pool.accent, axis: true, points: chart.points, dates: chart.dates, name: pool.name }) %></script>
 <%- include('../partials/footer', { scripts: ['/js/charts.js'] }) %>

@@ -14,11 +14,24 @@
 <%- include('../partials/flash') %>
 
 <% if (!snap.hasPositions) { %>
+  <% if (currentUser.cashBalanceCents > 0) { %>
+    <div class="card stat mb-3" style="max-width:360px">
+      <div class="label">Available cash</div>
+      <div class="value"><%= money.formatCents(currentUser.cashBalanceCents) %></div>
+      <div class="sub text-muted">virtual — from your withdrawn positions</div>
+    </div>
+  <% } %>
   <div class="card card-pad text-center" style="padding:64px 26px">
     <%- include('../partials/icon', { name: 'wallet', size: 34 }) %>
-    <h2 class="mt-2">Your portfolio is empty</h2>
-    <p class="lead narrow">Make your first deposit to start a live, simulated portfolio across four managed pools.</p>
-    <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Fund your account →</a>
+    <% if (currentUser.cashBalanceCents > 0) { %>
+      <h2 class="mt-2">No active positions</h2>
+      <p class="lead narrow">Your positions have all been withdrawn — the proceeds are in your virtual cash balance above. Deposit again to start a new simulated portfolio.</p>
+      <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Deposit again →</a>
+    <% } else { %>
+      <h2 class="mt-2">Your portfolio is empty</h2>
+      <p class="lead narrow">Make your first deposit to start a live, simulated portfolio across four managed pools.</p>
+      <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Fund your account →</a>
+    <% } %>
   </div>
 <% } else { %>
 
@@ -27,7 +40,7 @@
     <div class="card stat">
       <div class="label">Portfolio value</div>
       <div class="value value-flash" data-live="totalValue"><%= money.formatCents(snap.totalValueCents) %></div>
-      <div class="sub text-muted">across <%= snap.allocation.length %> pool<%= snap.allocation.length===1?'':'s' %></div>
+      <div class="sub text-muted"><%= money.formatCents0(snap.totalPrincipalCents) %> principal · <%= snap.allocation.length %> pool<%= snap.allocation.length===1?'':'s' %></div>
     </div>
     <div class="card stat">
       <div class="label">Total return</div>
@@ -35,9 +48,9 @@
       <div class="sub <%= snap.totalGainCents>=0?'text-up':'text-down' %>" data-live="totalGainPct"><%= money.formatPct(snap.totalGainPct) %></div>
     </div>
     <div class="card stat">
-      <div class="label">Principal invested</div>
-      <div class="value"><%= money.formatCents(snap.totalPrincipalCents) %></div>
-      <div class="sub text-muted">virtual balance</div>
+      <div class="label">Available cash</div>
+      <div class="value" data-live="cashBalance"><%= money.formatCents(currentUser.cashBalanceCents) %></div>
+      <div class="sub text-muted">virtual — withdrawals settle here</div>
     </div>
     <div class="card stat">
       <div class="label">Next unlock</div>
@@ -61,18 +74,18 @@
         <h3 class="mb-0">Portfolio performance</h3>
         <span class="tiny text-muted mono">simulated · combined value</span>
       </div>
-      <canvas class="chart" data-dash-combined style="height:280px"></canvas>
+      <canvas class="chart" data-dash-combined style="height:280px" role="img" aria-label="Combined portfolio value over time, simulated, updates live"></canvas>
     </div>
 
     <div class="card card-pad">
       <h3 class="mb-2">Allocation</h3>
       <div class="donut-wrap">
         <div style="width:170px;flex:none">
-          <canvas data-dash-donut style="width:100%;height:170px"></canvas>
+          <canvas data-dash-donut style="width:100%;height:170px" role="img" aria-label="Allocation by pool, weights listed beside the chart"></canvas>
         </div>
         <div style="flex:1;min-width:0" data-dash-legend>
           <% snap.allocation.forEach(function(a){ %>
-            <div class="flex justify-between items-center" style="padding:6px 0;border-bottom:1px solid var(--line)">
+            <div class="flex justify-between items-center legend-row">
               <span class="legend-item"><span class="swatch" style="background:<%= a.accent %>"></span><%= a.name %></span>
               <span class="mono small"><%= (a.weight*100).toFixed(1) %>%</span>
             </div>
@@ -91,7 +104,7 @@
           <span class="legend-item"><span class="swatch" style="background:<%= a.accent %>"></span><strong><%= a.name %></strong></span>
           <span class="pill <%= a.gainCents>=0?'pill-up':'pill-down' %>"><span class="dot"></span><%= money.formatPct(a.gainPct) %></span>
         </div>
-        <canvas class="spark mt-2" data-dash-pool="<%= a.poolId %>" data-accent="<%= a.accent %>"></canvas>
+        <canvas class="spark mt-2" data-dash-pool="<%= a.poolId %>" data-accent="<%= a.accent %>" role="img" aria-label="<%= a.name %> value trend, simulated"></canvas>
         <div class="flex justify-between mt-2">
           <div>
             <div class="tiny text-muted">Value</div>

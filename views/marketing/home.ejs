@@ -36,12 +36,12 @@
       <div class="hero-visual">
         <div class="hv-head">
           <div>
-            <div class="tiny text-muted" style="letter-spacing:.12em;text-transform:uppercase">Blended portfolio · simulated</div>
-            <div class="hv-val">$1,200 → <span class="text-up">$1,412</span></div>
+            <div class="tiny text-muted" style="letter-spacing:.12em;text-transform:uppercase">Four pools, indexed · simulated</div>
+            <div class="hv-val"><%= money.formatCents0(hero.fromCents) %> → <span class="<%= hero.gainPct>=0?'text-up':'text-down' %>"><%= money.formatCents0(hero.toCents) %></span></div>
           </div>
-          <span class="pill pill-up"><span class="dot"></span>+17.6% illustrative</span>
+          <span class="pill <%= hero.gainPct>=0?'pill-up':'pill-down' %>"><span class="dot"></span><%= money.formatPct(hero.gainPct, 1) %> simulated</span>
         </div>
-        <canvas class="chart" data-render="line" data-src="hero-chart" style="height:200px"></canvas>
+        <canvas class="chart" data-render="multi" data-src="hero-chart" style="height:200px" role="img" aria-label="Simulated 180-day index for the four pools; per-pool values in the legend and hover readout"></canvas>
         <div class="legend">
           <% pools.forEach(function(p){ %>
             <span class="legend-item"><span class="swatch" style="background:<%= p.accent %>"></span><%= p.name %></span>
@@ -127,7 +127,7 @@
           <canvas class="spark" data-render="spark" data-src="snap-<%= p.slug %>"></canvas>
           <div class="flex justify-between mt-2">
             <span class="tiny text-muted">Target range</span>
-            <span class="tiny mono" style="color:<%= p.accent %>"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</span>
+            <span class="tiny mono"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</span>
           </div>
         </div>
       <% }) %>
@@ -150,7 +150,10 @@
 </section>
 
 <!-- Chart data (CSP-safe embedded JSON) -->
-<script type="application/json" id="hero-chart"><%- JSON.stringify({ color: '#D8B25A', axis: false, points: snapshot[0].points.map(function(_,i){ return snapshot.reduce(function(a,s){ return a + (s.points[i]||0); },0)/snapshot.length; }) }) %></script>
+<script type="application/json" id="hero-chart"><%- JSON.stringify({
+  labels: snapshot[0].dates,
+  series: snapshot.map(function(s){ return { name: s.name, color: s.accent, points: s.points, width: 1.6 }; }),
+}) %></script>
 <% pools.forEach(function(p, i){ %>
 <script type="application/json" id="snap-<%= p.slug %>"><%- JSON.stringify({ color: p.accent, points: snapshot[i].points }) %></script>
 <% }) %>
