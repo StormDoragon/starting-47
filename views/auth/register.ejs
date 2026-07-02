@@ -1,0 +1,54 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container" style="max-width:960px">
+    <div class="grid grid-2" style="align-items:center;gap:44px">
+      <div>
+        <span class="eyebrow">Open an account</span>
+        <h1>Start your demo portfolio</h1>
+        <p class="lead">Create an account, complete a simulated verification, and fund a virtual balance across four managed pools.</p>
+        <ul class="text-muted" style="padding-left:18px">
+          <li>Live-updating portfolio dashboard</li>
+          <li>Two-factor authentication &amp; session controls</li>
+          <li>No real funds — everything is simulated</li>
+        </ul>
+        <p class="tiny text-muted mt-2"><%= brand.disclaimer %></p>
+      </div>
+
+      <div class="card card-pad">
+        <h3 class="mb-2">Create your account</h3>
+        <%- include('../partials/flash') %>
+        <% if (errors.form) { %><div class="flash flash-error mb-2"><span><%= errors.form %></span></div><% } %>
+        <form method="post" action="/register" novalidate>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <div class="field">
+            <label for="display_name">Full name</label>
+            <input class="input <%= errors.display_name ? 'input-err' : '' %>" id="display_name" name="display_name" value="<%= form.displayName || '' %>" autocomplete="name" required />
+            <% if (errors.display_name) { %><div class="field-error"><%= errors.display_name %></div><% } %>
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input class="input <%= errors.email ? 'input-err' : '' %>" id="email" name="email" type="email" value="<%= form.email || '' %>" autocomplete="email" required />
+            <% if (errors.email) { %><div class="field-error"><%= errors.email %></div><% } %>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input class="input <%= errors.password ? 'input-err' : '' %>" id="password" name="password" type="password" autocomplete="new-password" required />
+            <div class="hint">At least 10 characters, using 3 of: lowercase, uppercase, numbers, symbols.</div>
+            <% if (errors.password) { %><div class="field-error"><%= errors.password %></div><% } %>
+          </div>
+          <div class="field">
+            <label for="confirm">Confirm password</label>
+            <input class="input <%= errors.confirm ? 'input-err' : '' %>" id="confirm" name="confirm" type="password" autocomplete="new-password" required />
+            <% if (errors.confirm) { %><div class="field-error"><%= errors.confirm %></div><% } %>
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Create account</button>
+        </form>
+        <p class="small text-center mt-2">Already have an account? <a href="/login">Log in</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

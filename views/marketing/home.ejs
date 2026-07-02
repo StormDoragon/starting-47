@@ -1,0 +1,158 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Global forex &amp; multi-asset portfolios</span>
+      <h1>Institutional discipline,<br /><span class="accent">personal portfolios.</span></h1>
+      <p class="lead mt-1">
+        <%= brand.name %> allocates a single deposit across four managed pools —
+        equities, FX &amp; macro, real estate and technology ventures — then tracks
+        every tick in real time until maturity.
+      </p>
+      <div class="flex gap wrap mt-3">
+        <a href="/register" class="btn btn-primary btn-lg">Open an account →</a>
+        <a href="/how-it-works" class="btn btn-ghost btn-lg">See how it works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="n"><span data-countup="1200" data-prefix="$">$1,200</span></div>
+          <div class="l">Minimum deposit</div>
+        </div>
+        <div class="hero-stat">
+          <div class="n">4</div>
+          <div class="l">Diversified pools</div>
+        </div>
+        <div class="hero-stat">
+          <div class="n">3<span style="font-size:1rem"> yrs</span></div>
+          <div class="l">Managed lock term</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-visual">
+        <div class="hv-head">
+          <div>
+            <div class="tiny text-muted" style="letter-spacing:.12em;text-transform:uppercase">Blended portfolio · simulated</div>
+            <div class="hv-val">$1,200 → <span class="text-up">$1,412</span></div>
+          </div>
+          <span class="pill pill-up"><span class="dot"></span>+17.6% illustrative</span>
+        </div>
+        <canvas class="chart" data-render="line" data-src="hero-chart" style="height:200px"></canvas>
+        <div class="legend">
+          <% pools.forEach(function(p){ %>
+            <span class="legend-item"><span class="swatch" style="background:<%= p.accent %>"></span><%= p.name %></span>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live ticker -->
+<div class="ticker">
+  <div class="container" style="padding:0">
+    <div class="ticker-track" data-ticker></div>
+  </div>
+</div>
+
+<!-- Value props -->
+<section>
+  <div class="container">
+    <div class="text-center narrow">
+      <span class="eyebrow" style="justify-content:center">Why <%= brand.name %></span>
+      <h2>Built like a broker. Presented like a portfolio piece.</h2>
+      <p class="lead">Every capability below is a design showcase — engineered with real web-app security hygiene, but processing no real funds.</p>
+    </div>
+    <div class="grid grid-3 mt-4">
+      <div class="card card-pad card-hover">
+        <%- include('../partials/icon', { name: 'shield' }) %>
+        <h3 class="mt-2">Security-first architecture</h3>
+        <p>Hashed credentials, CSRF protection, rate-limited authentication, strict CSP and secure session cookies — the demo itself is hardened.</p>
+        <a href="/security" class="small">Security &amp; trust →</a>
+      </div>
+      <div class="card card-pad card-hover">
+        <%- include('../partials/icon', { name: 'layers' }) %>
+        <h3 class="mt-2">Four-pool diversification</h3>
+        <p>Split one deposit across equities, FX &amp; macro, real estate and IT ventures — each with its own risk profile and return character.</p>
+        <a href="/pools" class="small">Explore the pools →</a>
+      </div>
+      <div class="card card-pad card-hover">
+        <%- include('../partials/icon', { name: 'pulse' }) %>
+        <h3 class="mt-2">Real-time tracking</h3>
+        <p>A simulated performance engine appends fresh ticks continuously, so your dashboard value moves live — never a static number.</p>
+        <a href="/how-it-works" class="small">How tracking works →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust bar -->
+<section class="section-tight">
+  <div class="container">
+    <p class="text-center tiny text-muted" style="letter-spacing:.16em;text-transform:uppercase;margin-bottom:20px">Illustrative standards &amp; badges — for design demonstration only</p>
+    <div class="trust-bar">
+      <span class="trust-badge"><%- include('../partials/icon', { name: 'shield' }) %> ISO-27001-style controls</span>
+      <span class="trust-badge"><%- include('../partials/icon', { name: 'check' }) %> Independently “audited”*</span>
+      <span class="trust-badge"><%- include('../partials/icon', { name: 'lock' }) %> 256-bit encryption</span>
+      <span class="trust-badge"><%- include('../partials/icon', { name: 'bank' }) %> Segregated “custody”*</span>
+      <span class="trust-badge"><%- include('../partials/icon', { name: 'globe' }) %> Global market access</span>
+    </div>
+    <p class="text-center tiny text-muted mt-2">*Badges marked with an asterisk are illustrative and do not represent any real certification, audit, license, or custodial arrangement.</p>
+  </div>
+</section>
+
+<!-- Performance snapshot -->
+<section>
+  <div class="container">
+    <div class="flex justify-between items-center wrap gap mb-3">
+      <div>
+        <span class="eyebrow">Performance snapshot</span>
+        <h2 class="mb-0">Each pool, its own personality</h2>
+      </div>
+      <a href="/pools" class="btn btn-ghost">Compare all pools →</a>
+    </div>
+    <div class="grid grid-4">
+      <% pools.forEach(function(p, i){ %>
+        <div class="card card-pad card-hover">
+          <div class="flex justify-between items-center">
+            <span class="pill" style="color:<%= p.accent %>;border-color:<%= p.accent %>55"><span class="dot"></span><%= p.risk_profile %></span>
+            <span class="tiny text-muted mono">simulated</span>
+          </div>
+          <h3 class="mt-2 mb-0"><%= p.name %></h3>
+          <p class="small mt-1"><%= p.short_desc %></p>
+          <canvas class="spark" data-render="spark" data-src="snap-<%= p.slug %>"></canvas>
+          <div class="flex justify-between mt-2">
+            <span class="tiny text-muted">Target range</span>
+            <span class="tiny mono" style="color:<%= p.accent %>"><%= p.target_low_pct %>–<%= p.target_high_pct %>%</span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section-tight">
+  <div class="container">
+    <div class="card card-pad text-center" style="padding:52px 26px;background:linear-gradient(180deg, rgba(216,178,90,0.10), var(--bg-2));border-color:rgba(216,178,90,0.28)">
+      <h2>Open your demo account in minutes</h2>
+      <p class="lead narrow">Register, complete the simulated verification, fund a virtual balance and watch a live portfolio take shape.</p>
+      <div class="flex gap wrap mt-2" style="justify-content:center">
+        <a href="/register" class="btn btn-primary btn-lg">Open an account</a>
+        <a href="/pricing" class="btn btn-ghost btn-lg">View pricing &amp; terms</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Chart data (CSP-safe embedded JSON) -->
+<script type="application/json" id="hero-chart"><%- JSON.stringify({ color: '#D8B25A', axis: false, points: snapshot[0].points.map(function(_,i){ return snapshot.reduce(function(a,s){ return a + (s.points[i]||0); },0)/snapshot.length; }) }) %></script>
+<% pools.forEach(function(p, i){ %>
+<script type="application/json" id="snap-<%= p.slug %>"><%- JSON.stringify({ color: p.accent, points: snapshot[i].points }) %></script>
+<% }) %>
+
+<%- include('../partials/footer', { scripts: ['/js/charts.js'] }) %>

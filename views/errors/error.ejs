@@ -1,0 +1,14 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<section>
+  <div class="container narrow text-center" style="padding:60px 0">
+    <span class="eyebrow" style="justify-content:center">Error <%= code %></span>
+    <h1><%= heading %></h1>
+    <p class="lead"><%= message %></p>
+    <div class="flex gap wrap mt-2" style="justify-content:center">
+      <a href="/" class="btn btn-primary">Back to home</a>
+      <a href="/portal" class="btn btn-ghost">Go to dashboard</a>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

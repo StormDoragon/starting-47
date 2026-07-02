@@ -1,0 +1,97 @@
+<%- include('../partials/portal-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Step 1 of 2 · Verify your identity</span>
+    <h1>Complete your profile</h1>
+  </div>
+  <span class="pill pill-info"><span class="dot"></span>Simulated KYC — nothing is verified</span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card card-pad">
+    <form method="post" action="/portal/onboarding" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <div class="field">
+        <label for="full_name">Full legal name</label>
+        <input class="input <%= errors.full_name ? 'input-err' : '' %>" id="full_name" name="full_name" value="<%= form.full_name || currentUser.displayName || '' %>" autocomplete="name" required />
+        <% if (errors.full_name) { %><div class="field-error"><%= errors.full_name %></div><% } %>
+      </div>
+
+      <div class="grid grid-2" style="gap:16px">
+        <div class="field">
+          <label for="dob">Date of birth</label>
+          <input class="input <%= errors.dob ? 'input-err' : '' %>" id="dob" name="dob" type="date" value="<%= form.dob || '' %>" required />
+          <% if (errors.dob) { %><div class="field-error"><%= errors.dob %></div><% } %>
+        </div>
+        <div class="field">
+          <label for="country">Country of residence</label>
+          <select class="select <%= errors.country ? 'input-err' : '' %>" id="country" name="country" required>
+            <% var countries = ['United States','United Kingdom','Canada','Australia','Germany','France','Singapore','United Arab Emirates','Japan','Switzerland','Other'];
+               var sel = form.country || ''; %>
+            <option value="" <%= sel==='' ? 'selected' : '' %> disabled>Select…</option>
+            <% countries.forEach(function(c){ %>
+              <option value="<%= c %>" <%= sel===c ? 'selected' : '' %>><%= c %></option>
+            <% }) %>
+          </select>
+          <% if (errors.country) { %><div class="field-error"><%= errors.country %></div><% } %>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="address">Residential address</label>
+        <textarea class="input <%= errors.address ? 'input-err' : '' %>" id="address" name="address" rows="2" autocomplete="street-address" required><%= form.address || '' %></textarea>
+        <% if (errors.address) { %><div class="field-error"><%= errors.address %></div><% } %>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="field">
+        <label for="id_doc_type">Identity document</label>
+        <select class="select <%= errors.id_doc_type ? 'input-err' : '' %>" id="id_doc_type" name="id_doc_type" required>
+          <% var docs = ['Passport','Driver’s licence','National ID card','Residence permit'];
+             var dsel = form.id_doc_type || ''; %>
+          <option value="" <%= dsel==='' ? 'selected' : '' %> disabled>Select document type…</option>
+          <% docs.forEach(function(d){ %>
+            <option value="<%= d %>" <%= dsel===d ? 'selected' : '' %>><%= d %></option>
+          <% }) %>
+        </select>
+        <% if (errors.id_doc_type) { %><div class="field-error"><%= errors.id_doc_type %></div><% } %>
+      </div>
+
+      <div class="field">
+        <label>Upload document (mock)</label>
+        <label class="choice-body" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+          <%- include('../partials/icon', { name: 'eye', size: 20 }) %>
+          <span>
+            <span class="choice-title">Choose a file to attach</span>
+            <span class="choice-sub" data-file-label>No file selected — a reference name is stored, the file never leaves your browser.</span>
+          </span>
+          <input type="file" accept="image/*,.pdf" data-name-target="id_doc_ref" style="display:none" />
+        </label>
+        <input type="hidden" id="id_doc_ref" name="id_doc_ref" value="<%= form.id_doc_ref || '' %>" />
+        <% if (errors.id_doc_ref) { %><div class="field-error"><%= errors.id_doc_ref %></div><% } %>
+        <div class="hint">This demo does not upload or verify documents. Only the filename is recorded.</div>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" type="submit">Submit &amp; continue →</button>
+    </form>
+  </div>
+
+  <div class="card card-pad">
+    <span class="pill pill-gold"><span class="dot"></span>What happens next</span>
+    <h3 class="mt-2">Auto-approved for this demo</h3>
+    <p>In a live platform your submission would be checked against identity, sanctions and AML services. Here it is <strong>auto-approved instantly</strong> so you can explore the funded experience.</p>
+    <ul class="text-muted small" style="padding-left:18px">
+      <li>Your details are stored in the local demo database only.</li>
+      <li>No third-party identity service is contacted.</li>
+      <li>Nothing here constitutes real identity verification.</li>
+    </ul>
+    <div class="disclaimer-strong mt-2"><%= brand.disclaimer %></div>
+  </div>
+</div>
+
+<%- include('../partials/portal-foot') %>

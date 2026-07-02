@@ -1,0 +1,69 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container">
+    <div class="narrow text-center">
+      <span class="eyebrow" style="justify-content:center">How it works</span>
+      <h1>From deposit to maturity, in five steps</h1>
+      <p class="lead">One simple flow, fully simulated — engineered to feel like a real global broker while processing no real funds.</p>
+    </div>
+
+    <div class="grid grid-2 mt-4" style="align-items:start">
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Deposit</h3>
+            <p>Fund a virtual balance with a minimum of <strong><%= money.formatCents0(terms.minDeposit*100) %></strong>. Choose a mock method — card, bank transfer or crypto — and watch a simulated processing state settle instantly.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Allocate across four pools</h3>
+            <p>Split your deposit across Global Equities, FX &amp; Macro, Real Estate and IT &amp; Ventures — evenly or with custom weights. Each pool carries its own risk and return character.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Three-year managed lock</h3>
+            <p>Positions are held for a <strong><%= terms.lockYears %>-year</strong> term. This is where compounding and discipline do their work; early exits carry a penalty (fully disclosed before you confirm).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Real-time tracking</h3>
+            <p>A simulated performance engine appends fresh valuation ticks continuously. Your dashboard value, allocation donut and per-pool charts all update live — sourced from a stored time series, never a hardcoded number.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Maturity payout</h3>
+            <p>At the end of the term the position matures and becomes withdrawable to your virtual balance. A countdown on your dashboard tracks the exact unlock date.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="position:sticky;top:90px">
+        <span class="pill pill-gold"><span class="dot"></span>The engine</span>
+        <h3 class="mt-2">Why your numbers move</h3>
+        <p>Each pool is modelled as a geometric random walk with its own drift and volatility. Real Estate drifts slowly with low volatility; FX &amp; Macro swings hardest; IT &amp; Ventures grows fastest and can jump.</p>
+        <div class="grid" style="gap:12px">
+          <% pools.forEach(function(p){ %>
+            <div class="flex items-center gap" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">
+              <span class="flex items-center gap-sm"><span class="swatch" style="width:11px;height:11px;border-radius:3px;background:<%= p.accent %>"></span><strong class="small"><%= p.name %></strong></span>
+              <span class="tiny mono text-muted">vol <%= (p.vol_daily*100).toFixed(2) %>%/day · <span class="risk-<%= p.risk_profile.split(' ')[0] %>"><%= p.risk_profile %></span></span>
+            </div>
+          <% }) %>
+        </div>
+        <a href="/register" class="btn btn-primary btn-block mt-3">Open an account</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

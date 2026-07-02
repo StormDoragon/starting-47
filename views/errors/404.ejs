@@ -1,0 +1,2 @@
+<% var code = 404, heading = 'Page not found', message = (typeof message !== 'undefined' && message) ? message : 'The page you were looking for has moved or never existed.'; %>
+<%- include('error', { code: code, heading: heading, message: message }) %>

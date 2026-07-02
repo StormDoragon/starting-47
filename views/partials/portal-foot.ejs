@@ -1,0 +1,8 @@
+  </main>
+</div>
+<% if (typeof scripts !== 'undefined') { scripts.forEach(function(s){ %>
+<script src="<%= s %>" defer></script>
+<% }) } %>
+<script src="/js/app.js" defer></script>
+</body>
+</html>

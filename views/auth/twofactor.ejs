@@ -1,0 +1,23 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section>
+  <div class="container" style="max-width:420px">
+    <div class="card card-pad text-center">
+      <%- include('../partials/icon', { name: 'lock', size: 30 }) %>
+      <h2 class="mt-2 mb-0">Two-factor verification</h2>
+      <p class="small">Enter the 6-digit code from your authenticator app.</p>
+      <% if (errors.token) { %><div class="flash flash-error mb-2"><span><%= errors.token %></span></div><% } %>
+      <form method="post" action="/login/2fa" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="field">
+          <input class="input mono" name="token" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000" style="text-align:center;font-size:1.4rem;letter-spacing:0.4em" required autofocus />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Verify &amp; continue</button>
+      </form>
+      <p class="tiny text-muted mt-2"><a href="/login">← Back to login</a></p>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
