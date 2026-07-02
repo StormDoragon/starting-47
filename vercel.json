@@ -1,12 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm rebuild better-sqlite3",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/app" }
   ],
   "functions": {
     "api/app.js": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/better-sqlite3/**"
     }
+  },
+  "env": {
+    "DEMO_AUTO_APPROVE_KYC": "true"
   }
 }
