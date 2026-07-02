@@ -33,13 +33,14 @@ custody of funds, and no real investment products. "Deposits" credit a
 | Layer      | Choice                                                        |
 | ---------- | ------------------------------------------------------------- |
 | Runtime    | Node.js + Express (server-rendered EJS)                       |
-| Database   | SQLite via `better-sqlite3` (parameterised prepared statements) |
+| Database   | SQLite/libSQL via `@libsql/client` — an embedded local file by default, or a hosted libSQL/Turso database in production (parameterised queries throughout) |
 | Auth       | bcrypt password hashing, TOTP 2FA (`speakeasy` + `qrcode`)    |
-| Security   | Helmet + strict CSP, double-submit CSRF, `express-rate-limit`, secure session cookies, SQLite-backed session store |
+| Security   | Helmet + strict CSP, double-submit CSRF, `express-rate-limit`, secure session cookies, libSQL-backed session store |
 | Charts     | Hand-written, dependency-free DPR-aware canvas charts         |
-| Engine     | Geometric-Brownian-motion per-pool simulation with live ticking |
+| Engine     | Geometric-Brownian-motion per-pool simulation, live-ticking (long-running hosts) or lazy on-read ticking + cron (serverless) |
 
-No build step, no frontend framework, no CDN dependencies — it runs offline.
+No build step, no frontend framework, no CDN dependencies — it runs offline
+as a single Node process, and also deploys to Vercel (see below).
 
 ## Quick start
 
@@ -62,29 +63,32 @@ Configuration is via environment variables — see [`.env.example`](./.env.examp
 ## Architecture
 
 ```
-server.js                 # boot + start the live performance engine
+server.js                 # long-running entry: boot + start the interval engine loop
+api/index.js               # Vercel serverless entry: same Express app, no loop
+vercel.json                # rewrites everything to api/index.js + a daily cron
 src/
-  config.js               # brand, terms, session, engine, security config
-  app.js                  # express app: middleware, sessions, CSRF, routes
+  config.js               # brand, terms, session, engine, security, db config
+  app.js                  # express app factory (async): middleware, sessions, CSRF, routes
   db/
     schema.sql            # full schema (see Data model below)
-    index.js  seed.js  reset.js  pools.js
-  models/                 # thin repositories (prepared statements only)
+    index.js               # libSQL client + migrate() (schema + additive migrations)
+    seed.js  reset.js  pools.js
+  models/                 # thin async repositories over the libSQL client
     users kyc pools positions ticks transactions audit
   services/
-    performanceEngine.js  # backfill + live GBM ticking (the core)
+    performanceEngine.js  # backfill + interval ticking + lazy on-read ticking (the core)
     portfolio.js          # derives ALL dashboard numbers from the tick series
     totp.js  random.js
   security/
     helmet.js csrf.js rateLimit.js validate.js auth.js sessionStore.js
   routes/
     marketing.js auth.js portal.js api.js
-  utils/  money.js time.js id.js
+  utils/  money.js time.js id.js  asyncHandler.js
 views/                    # EJS templates (marketing/, auth/, portal/, errors/, partials/)
 public/                   # css/app.css, js/app.js, js/charts.js, img/
 ```
 
-### Data model (SQLite)
+### Data model (SQLite / libSQL)
 
 `users`, `kyc_submissions`, `pools`, `positions`, `performance_ticks`,
 `transactions`, `sessions`, `audit_log`. Money is stored as integer **cents**.
@@ -102,9 +106,24 @@ live loop then appends a fresh tick per active position every few seconds.
 Live ticks are **time-scaled**: each one applies the fraction of a trading
 day that actually elapsed × `SIM_SPEED` (drift scales linearly, volatility
 with √t), so a long-running server compounds honestly instead of applying a
-full day's return every few seconds. On boot the engine also **catches up**
-any calendar days missed while the server was offline, so charts never have
-flat holes.
+full day's return every few seconds. The engine also **catches up** any
+calendar days missed while idle (server restart, or a serverless cold start),
+so charts never have flat holes.
+
+Two engine modes, picked automatically by `config.engine.mode` (`ENGINE_MODE`
+env var to override):
+
+- **`interval`** (default off Vercel) — `server.js` starts a `setInterval`
+  loop that ticks every active position on a timer. Requires a process that
+  stays alive between requests.
+- **`lazy`** (default when Vercel's own `VERCEL` env var is present) — there
+  is no loop. Instead, `GET /api/portfolio` and the dashboard/withdraw pages
+  call `engine.refreshUserPositions()` on read: it catches up missed days and
+  appends one time-scaled tick if the position's latest tick is older than
+  `TICK_INTERVAL_MS`. A user polling the live dashboard drives their own
+  ticks exactly as if a loop were running. `vercel.json` also schedules
+  `GET /api/cron/tick` once a day (authenticated via `CRON_SECRET`) so
+  positions stay current even for users who never open the dashboard.
 
 ### Charts & accessibility
 
@@ -164,6 +183,45 @@ input validation + sanitisation, and parameterised queries throughout.
 - [x] bcrypt password hashing · [x] CSRF protection · [x] rate-limited auth
 - [x] input validation/sanitisation · [x] parameterised queries · [x] strict CSP
 - [x] secure `httpOnly`/`sameSite` session cookies · [x] session regeneration on login
+
+## Deployment
+
+### Vercel
+
+The app runs as a single serverless function (`api/index.js`) behind
+`vercel.json` rewrites, with `public/` served from Vercel's CDN.
+
+1. **Database.** Vercel functions have no persistent disk, so the embedded
+   SQLite file won't survive between invocations — provision a hosted
+   [Turso](https://turso.tech) (libSQL) database instead:
+   ```bash
+   turso db create meridian
+   turso db show meridian --url          # → DB_URL
+   turso db tokens create meridian       # → DB_AUTH_TOKEN
+   ```
+2. **Environment variables** (Vercel dashboard → Settings → Environment
+   Variables), see [`.env.example`](./.env.example) for the full list:
+   - `DB_URL`, `DB_AUTH_TOKEN` — the Turso database from step 1
+   - `SESSION_SECRET` — a long random string (sessions reset on redeploy if unset)
+   - `CRON_SECRET` — a long random string; required for the daily cron catch-up
+   - `NODE_ENV=production` — enables secure (HTTPS-only) cookies
+3. **Deploy.**
+   ```bash
+   vercel deploy --prod
+   ```
+   `ENGINE_MODE` doesn't need to be set — the app detects Vercel's own
+   `VERCEL` environment variable and switches to lazy ticking automatically.
+
+The first request after a deploy runs `migrate()` (schema + additive
+migrations) and seeds the four pools; subsequent warm invocations reuse the
+same Express app instance.
+
+### A long-running host (Railway, Render, Fly.io, a VPS, a container)
+
+This is the simpler path if you don't need serverless: `npm start` runs
+`server.js`, which keeps the interval engine loop alive and works with either
+an embedded SQLite file (`DB_FILE`, the default) or a hosted `DB_URL`. No
+Vercel-specific configuration is needed.
 
 ## Testing
 

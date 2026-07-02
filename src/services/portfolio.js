@@ -10,17 +10,18 @@ const { completedYears } = require('../utils/time');
  * Compute a full portfolio snapshot for a user, entirely from the stored
  * performance-tick series. Nothing here is hardcoded.
  */
-function snapshot(userId) {
-  const positions = positionsModel.activeByUser(userId);
-  const pools = poolsModel.all();
+async function snapshot(userId) {
+  const positions = await positionsModel.activeByUser(userId);
+  const pools = await poolsModel.all();
   const poolById = Object.fromEntries(pools.map((p) => [p.id, p]));
 
   let totalValue = 0;
   let totalPrincipal = 0;
   const byPool = {};
 
-  const positionViews = positions.map((pos) => {
-    const latest = ticksModel.latest(pos.id);
+  const positionViews = [];
+  for (const pos of positions) {
+    const latest = await ticksModel.latest(pos.id);
     const value = latest ? latest.value_cents : pos.principal_cents;
     const pool = poolById[pos.pool_id];
     totalValue += value;
@@ -38,7 +39,7 @@ function snapshot(userId) {
     byPool[pos.pool_id].valueCents += value;
     byPool[pos.pool_id].positionIds.push(pos.id);
 
-    return {
+    positionViews.push({
       id: pos.id,
       pool,
       principalCents: pos.principal_cents,
@@ -47,8 +48,8 @@ function snapshot(userId) {
       gainPct: pos.principal_cents ? (value - pos.principal_cents) / pos.principal_cents : 0,
       depositedAt: pos.deposited_at,
       lockEndAt: pos.lock_end_at,
-    };
-  });
+    });
+  }
 
   const allocation = Object.values(byPool)
     .map((entry) => ({
@@ -84,18 +85,19 @@ function snapshot(userId) {
  * Merge all active positions' daily series into a single combined portfolio
  * value curve (summed across positions per day) for the main line chart.
  */
-function combinedDailySeries(userId) {
-  const positions = positionsModel.activeByUser(userId);
+async function combinedDailySeries(userId) {
+  const positions = await positionsModel.activeByUser(userId);
   const perDay = new Map();
   const lastByPos = new Map();
 
   // Gather all distinct days across positions.
   const allDays = new Set();
-  const seriesByPos = positions.map((pos) => {
-    const s = ticksModel.dailySeries(pos.id);
+  const seriesByPos = [];
+  for (const pos of positions) {
+    const s = await ticksModel.dailySeries(pos.id);
     s.forEach((row) => allDays.add(row.day));
-    return { posId: pos.id, rows: s };
-  });
+    seriesByPos.push({ posId: pos.id, rows: s });
+  }
   const days = [...allDays].sort();
 
   // Forward-fill each position's value across the shared day axis.
@@ -119,20 +121,21 @@ function combinedDailySeries(userId) {
 }
 
 /** Per-pool daily series (summed across a user's positions in that pool). */
-function poolDailySeries(userId) {
-  const positions = positionsModel.activeByUser(userId);
-  const pools = poolsModel.all();
+async function poolDailySeries(userId) {
+  const positions = await positionsModel.activeByUser(userId);
+  const pools = await poolsModel.all();
   const result = {};
   for (const pool of pools) {
     const inPool = positions.filter((p) => p.pool_id === pool.id);
     if (inPool.length === 0) continue;
     const perDay = new Map();
     const allDays = new Set();
-    const seriesByPos = inPool.map((pos) => {
-      const s = ticksModel.dailySeries(pos.id);
+    const seriesByPos = [];
+    for (const pos of inPool) {
+      const s = await ticksModel.dailySeries(pos.id);
       s.forEach((row) => allDays.add(row.day));
-      return { rows: s };
-    });
+      seriesByPos.push({ rows: s });
+    }
     const days = [...allDays].sort();
     const last = new Array(seriesByPos.length).fill(0);
     const cursor = new Array(seriesByPos.length).fill(0);
@@ -159,12 +162,12 @@ function poolDailySeries(userId) {
 
 /**
  * Penalty preview for an early withdrawal of a position (before its lock ends).
- * Returns null if the position is already mature (no penalty).
+ * Returns a mature=true preview (no penalty) once the lock has elapsed.
  */
-function earlyWithdrawalPreview(position) {
+async function earlyWithdrawalPreview(position) {
   const now = new Date();
   const lockEnd = new Date(position.lock_end_at);
-  const latest = ticksModel.latest(position.id);
+  const latest = await ticksModel.latest(position.id);
   const valueCents = latest ? latest.value_cents : position.principal_cents;
 
   if (now >= lockEnd) {

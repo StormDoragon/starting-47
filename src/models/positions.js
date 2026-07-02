@@ -1,44 +1,31 @@
 'use strict';
 
-const { db } = require('../db');
+const { run, get, all } = require('../db');
 const { newId } = require('../utils/id');
 
-const insert = db.prepare(`
-  INSERT INTO positions
-    (id, user_id, pool_id, principal_cents, deposited_at, lock_end_at, status)
-  VALUES (@id, @user_id, @pool_id, @principal_cents, @deposited_at, @lock_end_at, 'active')
-`);
-const byUser = db.prepare(
-  "SELECT * FROM positions WHERE user_id = ? ORDER BY created_at ASC",
-);
-const activeByUser = db.prepare(
-  "SELECT * FROM positions WHERE user_id = ? AND status = 'active' ORDER BY created_at ASC",
-);
-const byId = db.prepare('SELECT * FROM positions WHERE id = ?');
-const allActive = db.prepare("SELECT * FROM positions WHERE status = 'active'");
-
-function create({ userId, poolId, principalCents, depositedAt, lockEndAt }) {
+async function create({ userId, poolId, principalCents, depositedAt, lockEndAt }) {
   const id = newId('pos');
-  insert.run({
-    id,
-    user_id: userId,
-    pool_id: poolId,
-    principal_cents: principalCents,
-    deposited_at: depositedAt,
-    lock_end_at: lockEndAt,
-  });
-  return byId.get(id);
+  await run(
+    `INSERT INTO positions
+       (id, user_id, pool_id, principal_cents, deposited_at, lock_end_at, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'active')`,
+    [id, userId, poolId, principalCents, depositedAt, lockEndAt],
+  );
+  return get('SELECT * FROM positions WHERE id = ?', [id]);
 }
 
 function markWithdrawn(id) {
-  db.prepare("UPDATE positions SET status = 'withdrawn' WHERE id = ?").run(id);
+  return run("UPDATE positions SET status = 'withdrawn' WHERE id = ?", [id]);
 }
 
 module.exports = {
   create,
-  byId: (id) => byId.get(id),
-  byUser: (uid) => byUser.all(uid),
-  activeByUser: (uid) => activeByUser.all(uid),
-  allActive: () => allActive.all(),
+  byId: (id) => get('SELECT * FROM positions WHERE id = ?', [id]),
+  byUser: (uid) => all('SELECT * FROM positions WHERE user_id = ? ORDER BY created_at ASC', [uid]),
+  activeByUser: (uid) =>
+    all("SELECT * FROM positions WHERE user_id = ? AND status = 'active' ORDER BY created_at ASC", [
+      uid,
+    ]),
+  allActive: () => all("SELECT * FROM positions WHERE status = 'active'"),
   markWithdrawn,
 };

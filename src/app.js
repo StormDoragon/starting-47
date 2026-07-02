@@ -19,9 +19,9 @@ const { attachUser } = require('./security/auth');
 const money = require('./utils/money');
 const timeUtil = require('./utils/time');
 
-function createApp() {
-  migrate();
-  seedPools();
+async function createApp() {
+  await migrate();
+  await seedPools();
 
   const app = express();
   const sessionStore = new SqliteStore();

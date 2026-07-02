@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 const speakeasy = require('speakeasy');
 
 const { createApp } = require('../src/app');
-const { db } = require('../src/db');
+const { client } = require('../src/db');
 
 let server;
 let base;
@@ -79,7 +79,7 @@ async function postForm(pathname, fields, { csrf = true } = {}) {
 }
 
 test.before(async () => {
-  const app = createApp();
+  const app = await createApp();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -89,7 +89,7 @@ test.before(async () => {
 test.after(async () => {
   await new Promise((resolve) => server.close(resolve));
   try {
-    db.close();
+    client.close();
     require('fs').rmSync(process.env.DB_FILE, { force: true });
     require('fs').rmSync(process.env.DB_FILE + '-wal', { force: true });
     require('fs').rmSync(process.env.DB_FILE + '-shm', { force: true });

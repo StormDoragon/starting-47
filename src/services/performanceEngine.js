@@ -10,7 +10,9 @@
  *  - backfillPosition(): on deposit, seeds a simulated daily track ending at the
  *    principal at the moment of deposit, so charts are rich immediately.
  *  - start(): a live loop that appends one fresh tick per active position on an
- *    interval, so the dashboard visibly ticks in real time.
+ *    interval (long-running hosts).
+ *  - refreshUserPositions(): serverless-friendly "lazy" ticking — catch up any
+ *    missed days and append a fresh tick when the portfolio is read.
  */
 
 const config = require('../config');
@@ -40,8 +42,8 @@ function stepMultiplier(pool, rng = Math.random, dayFraction = 1) {
  * lands exactly on the deposited principal at `deposited_at`; earlier points are
  * the simulated track leading into it. Live ticks then extend it forward.
  */
-function backfillPosition(position) {
-  const pool = poolsModel.byId(position.pool_id);
+async function backfillPosition(position) {
+  const pool = await poolsModel.byId(position.pool_id);
   const days = config.engine.backfillDays;
   const depositedMs = new Date(position.deposited_at).getTime();
 
@@ -58,7 +60,7 @@ function backfillPosition(position) {
     const value = Math.round(position.principal_cents * (mult[i] / last));
     rows.push({ positionId: position.id, ts, valueCents: Math.max(1, value) });
   }
-  ticksModel.addMany(rows);
+  await ticksModel.addMany(rows);
   return rows.length;
 }
 
@@ -68,30 +70,31 @@ function backfillPosition(position) {
  * (wall-clock elapsed × simSpeed), capped at one trading day — longer gaps
  * are the catch-up job's business.
  */
-function tickPosition(position, now = Date.now()) {
-  const pool = poolsModel.byId(position.pool_id);
-  const latest = ticksModel.latest(position.id);
+async function tickPosition(position, now = Date.now()) {
+  const pool = await poolsModel.byId(position.pool_id);
+  const latest = await ticksModel.latest(position.id);
   const base = latest ? latest.value_cents : position.principal_cents;
   const elapsedMs = latest ? Math.max(0, now - new Date(latest.ts).getTime()) : 0;
   const dayFraction = Math.min(1, (elapsedMs * config.engine.simSpeed) / DAY_MS) || 1 / 86400;
   const next = Math.max(1, Math.round(base * stepMultiplier(pool, Math.random, dayFraction)));
-  ticksModel.add(position.id, new Date(now).toISOString(), next);
+  await ticksModel.add(position.id, new Date(now).toISOString(), next);
   return next;
 }
 
-function tickAll() {
-  const active = positionsModel.allActive();
-  for (const p of active) tickPosition(p);
+async function tickAll() {
+  const active = await positionsModel.allActive();
+  for (const p of active) await tickPosition(p);
   return active.length;
 }
 
 /**
  * Fill the gap between a position's last stored tick and now with daily ticks,
- * so charts have no flat holes after the server has been offline for a while.
+ * so charts have no flat holes after the server (or serverless function) has
+ * been idle for a while.
  */
-function catchUpPosition(position, now = Date.now()) {
-  const pool = poolsModel.byId(position.pool_id);
-  const latest = ticksModel.latest(position.id);
+async function catchUpPosition(position, now = Date.now()) {
+  const pool = await poolsModel.byId(position.pool_id);
+  const latest = await ticksModel.latest(position.id);
   if (!latest) return 0;
   let ts = new Date(latest.ts).getTime();
   let value = latest.value_cents;
@@ -101,33 +104,49 @@ function catchUpPosition(position, now = Date.now()) {
     value = Math.max(1, Math.round(value * stepMultiplier(pool)));
     rows.push({ positionId: position.id, ts: new Date(ts).toISOString(), valueCents: value });
   }
-  if (rows.length) ticksModel.addMany(rows);
+  if (rows.length) await ticksModel.addMany(rows);
   return rows.length;
 }
 
-function catchUpAll() {
-  const active = positionsModel.allActive();
+async function catchUpAll() {
+  const active = await positionsModel.allActive();
   let added = 0;
-  for (const p of active) added += catchUpPosition(p);
+  for (const p of active) added += await catchUpPosition(p);
+  return added;
+}
+
+/**
+ * Lazy mode (serverless): bring one user's positions up to date on read.
+ * Catches up any missed full days, then appends a fresh live tick when the
+ * last one is at least a tick interval old. Returns the number of ticks added.
+ */
+async function refreshUserPositions(userId, now = Date.now()) {
+  const positions = await positionsModel.activeByUser(userId);
+  let added = 0;
+  for (const pos of positions) {
+    added += await catchUpPosition(pos, now);
+    const latest = await ticksModel.latest(pos.id);
+    if (!latest || now - new Date(latest.ts).getTime() >= config.engine.tickIntervalMs) {
+      await tickPosition(pos, now);
+      added += 1;
+    }
+  }
   return added;
 }
 
 let timer = null;
 function start() {
   if (timer) return;
-  try {
-    const added = catchUpAll();
-    if (added > 0) console.log(`performance engine: backfilled ${added} missed daily tick(s)`);
-  } catch (err) {
-    console.error('performance engine catch-up failed:', err.message);
-  }
+  catchUpAll()
+    .then((added) => {
+      if (added > 0) console.log(`performance engine: backfilled ${added} missed daily tick(s)`);
+    })
+    .catch((err) => console.error('performance engine catch-up failed:', err.message));
   timer = setInterval(() => {
-    try {
-      tickAll();
-    } catch (err) {
+    tickAll().catch((err) => {
       // Never let a bad tick crash the process.
       console.error('performance engine tick failed:', err.message);
-    }
+    });
   }, config.engine.tickIntervalMs);
   if (timer.unref) timer.unref();
 }
@@ -140,7 +159,7 @@ function stop() {
 /**
  * A stable, seeded simulated index series for MARKETING pages (so the pool
  * charts don't reshuffle on every reload). Returns an array of {t, v} where v
- * is an index normalised to start at 100.
+ * is an index normalised to start at 100. Pure math — no database access.
  */
 function syntheticPoolSeries(pool, days = 180, seedSalt = '') {
   const rng = mulberry32(seedFromString(pool.slug + seedSalt));
@@ -165,6 +184,7 @@ module.exports = {
   tickAll,
   catchUpPosition,
   catchUpAll,
+  refreshUserPositions,
   start,
   stop,
   syntheticPoolSeries,

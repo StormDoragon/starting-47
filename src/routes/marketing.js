@@ -6,6 +6,7 @@ const router = express.Router();
 const poolsModel = require('../models/pools');
 const engine = require('../services/performanceEngine');
 const config = require('../config');
+const ah = require('../utils/asyncHandler');
 
 /** Build a compact chart payload for a pool's simulated index history. */
 function poolChart(pool, days = 180) {
@@ -19,56 +20,68 @@ function poolChart(pool, days = 180) {
   };
 }
 
-router.get('/', (req, res) => {
-  const pools = poolsModel.all();
-  // Snapshot performance for the homepage "performance snapshot" chart.
-  const snapshot = pools.map((p) => poolChart(p, 180));
+router.get(
+  '/',
+  ah(async (req, res) => {
+    const pools = await poolsModel.all();
+    // Snapshot performance for the homepage "performance snapshot" chart.
+    const snapshot = pools.map((p) => poolChart(p, 180));
 
-  // Hero stat: what the minimum deposit, split evenly, would have become over
-  // this window — computed from the same simulated series the chart shows.
-  const blendedEnd =
-    snapshot.reduce((a, s) => a + s.points[s.points.length - 1], 0) / snapshot.length;
-  const heroFromCents = config.terms.minDeposit * 100;
-  const heroToCents = Math.round((heroFromCents * blendedEnd) / 100);
-  const hero = {
-    fromCents: heroFromCents,
-    toCents: heroToCents,
-    gainPct: (heroToCents - heroFromCents) / heroFromCents,
-  };
+    // Hero stat: what the minimum deposit, split evenly, would have become over
+    // this window — computed from the same simulated series the chart shows.
+    const blendedEnd =
+      snapshot.reduce((a, s) => a + s.points[s.points.length - 1], 0) / snapshot.length;
+    const heroFromCents = config.terms.minDeposit * 100;
+    const heroToCents = Math.round((heroFromCents * blendedEnd) / 100);
+    const hero = {
+      fromCents: heroFromCents,
+      toCents: heroToCents,
+      gainPct: (heroToCents - heroFromCents) / heroFromCents,
+    };
 
-  res.render('marketing/home', {
-    title: `${config.brand.name} — ${config.brand.tagline}`,
-    pools,
-    snapshot,
-    hero,
-  });
-});
+    res.render('marketing/home', {
+      title: `${config.brand.name} — ${config.brand.tagline}`,
+      pools,
+      snapshot,
+      hero,
+    });
+  }),
+);
 
-router.get('/how-it-works', (req, res) => {
-  res.render('marketing/how-it-works', {
-    title: 'How it works',
-    pools: poolsModel.all(),
-  });
-});
+router.get(
+  '/how-it-works',
+  ah(async (req, res) => {
+    res.render('marketing/how-it-works', {
+      title: 'How it works',
+      pools: await poolsModel.all(),
+    });
+  }),
+);
 
-router.get('/pools', (req, res) => {
-  const pools = poolsModel.all();
-  res.render('marketing/pools', {
-    title: 'Investment pools',
-    pools,
-    charts: pools.map((p) => poolChart(p, 180)),
-  });
-});
+router.get(
+  '/pools',
+  ah(async (req, res) => {
+    const pools = await poolsModel.all();
+    res.render('marketing/pools', {
+      title: 'Investment pools',
+      pools,
+      charts: pools.map((p) => poolChart(p, 180)),
+    });
+  }),
+);
 
-router.get('/pools/:slug', (req, res, next) => {
-  const pool = poolsModel.bySlug(req.params.slug);
-  if (!pool) return next();
-  res.render('marketing/pool-detail', {
-    title: `${pool.name} pool`,
-    pool,
-    chart: poolChart(pool, 365),
-  });
-});
+router.get(
+  '/pools/:slug',
+  ah(async (req, res, next) => {
+    const pool = await poolsModel.bySlug(req.params.slug);
+    if (!pool) return next();
+    res.render('marketing/pool-detail', {
+      title: `${pool.name} pool`,
+      pool,
+      chart: poolChart(pool, 365),
+    });
+  }),
+);
 
 router.get('/security', (req, res) => {
   res.render('marketing/security', { title: 'Security & trust' });

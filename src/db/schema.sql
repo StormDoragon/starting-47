@@ -1,9 +1,8 @@
--- Meridian Capital — demo schema (SQLite)
+-- Meridian Capital — demo schema (SQLite / libSQL)
 -- All monetary values are stored in integer cents to avoid float drift.
 -- This platform is a SIMULATION. No real funds are represented.
-
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
+-- (No PRAGMAs here: hosted libSQL rejects them over the wire; the driver
+-- applies what it can at connection time.)
 
 CREATE TABLE IF NOT EXISTS users (
   id             TEXT PRIMARY KEY,

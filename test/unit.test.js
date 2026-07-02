@@ -86,7 +86,7 @@ test('random: gaussian has roughly zero mean and unit variance', () => {
 
 // ---- Engine + portfolio math (needs the temp database) ---------------------
 
-const { db } = require('../src/db');
+const { client, run, all, migrate } = require('../src/db');
 const { seedPools } = require('../src/db/seed');
 const engine = require('../src/services/performanceEngine');
 const portfolio = require('../src/services/portfolio');
@@ -96,104 +96,123 @@ const ticksModel = require('../src/models/ticks');
 const poolsModel = require('../src/models/pools');
 const config = require('../src/config');
 
-test('engine: backfill ends exactly on the principal', () => {
-  seedPools();
-  const user = usersModel.create({
+test.before(async () => {
+  await migrate();
+  await seedPools();
+});
+
+test('engine: backfill ends exactly on the principal', async () => {
+  const user = await usersModel.create({
     email: 'unit@example.com',
     password: 'Str0ng-Passw0rd!',
     displayName: 'Unit',
   });
   const now = new Date();
-  const pos = positionsModel.create({
+  const pos = await positionsModel.create({
     userId: user.id,
     poolId: 'pool_forex',
     principalCents: 250000,
     depositedAt: now.toISOString(),
     lockEndAt: timeUtil.addYears(now, 3).toISOString(),
   });
-  const rows = engine.backfillPosition(pos);
+  const rows = await engine.backfillPosition(pos);
   assert.equal(rows, config.engine.backfillDays + 1);
-  const latest = ticksModel.latest(pos.id);
+  const latest = await ticksModel.latest(pos.id);
   assert.equal(latest.value_cents, 250000);
-  const series = ticksModel.series(pos.id);
+  const series = await ticksModel.series(pos.id);
   assert.equal(series.length, config.engine.backfillDays + 1);
   series.forEach((t) => assert.ok(t.value_cents > 0));
 });
 
-test('engine: tick appends a positive value based on the last tick', () => {
-  const pos = positionsModel.allActive()[0];
-  const before = ticksModel.series(pos.id).length;
-  const next = engine.tickPosition(pos);
+test('engine: tick appends a positive value based on the last tick', async () => {
+  const pos = (await positionsModel.allActive())[0];
+  const before = (await ticksModel.series(pos.id)).length;
+  const next = await engine.tickPosition(pos);
   assert.ok(next > 0);
-  assert.equal(ticksModel.series(pos.id).length, before + 1);
+  assert.equal((await ticksModel.series(pos.id)).length, before + 1);
 });
 
-test('engine: catch-up fills daily gaps after downtime', () => {
-  const pos = positionsModel.allActive()[0];
+test('engine: catch-up fills daily gaps after downtime', async () => {
+  const pos = (await positionsModel.allActive())[0];
   // Simulate 5 days of downtime by shifting the whole series into the past.
-  const shift = db.prepare('UPDATE performance_ticks SET ts = ? WHERE id = ?');
-  const move = db.transaction(() => {
-    for (const t of db
-      .prepare('SELECT id, ts FROM performance_ticks WHERE position_id = ?')
-      .all(pos.id)) {
-      shift.run(new Date(new Date(t.ts).getTime() - 5 * timeUtil.DAY_MS).toISOString(), t.id);
-    }
-  });
-  move();
-  const added = engine.catchUpPosition(positionsModel.byId(pos.id));
+  const ticks = await all('SELECT id, ts FROM performance_ticks WHERE position_id = ?', [pos.id]);
+  for (const t of ticks) {
+    await run('UPDATE performance_ticks SET ts = ? WHERE id = ?', [
+      new Date(new Date(t.ts).getTime() - 5 * timeUtil.DAY_MS).toISOString(),
+      t.id,
+    ]);
+  }
+  const added = await engine.catchUpPosition(await positionsModel.byId(pos.id));
   assert.ok(added >= 4 && added <= 5, `added ${added}`);
-  const fresh = ticksModel.latest(pos.id);
+  const fresh = await ticksModel.latest(pos.id);
   assert.ok(Date.now() - new Date(fresh.ts).getTime() <= timeUtil.DAY_MS);
 });
 
-test('portfolio: snapshot totals come from the tick series', () => {
-  const user = usersModel.byEmail('unit@example.com');
-  const snap = portfolio.snapshot(user.id);
+test('engine: refreshUserPositions ticks stale positions (lazy mode)', async () => {
+  const user = await usersModel.byEmail('unit@example.com');
+  const pos = (await positionsModel.activeByUser(user.id))[0];
+  const before = (await ticksModel.series(pos.id)).length;
+  // The latest tick is fresh (just added by catch-up), so a refresh "now"
+  // should be a no-op...
+  const addedNow = await engine.refreshUserPositions(user.id);
+  assert.equal(addedNow, 0);
+  // ...but a refresh one tick-interval in the future must append one tick.
+  const added = await engine.refreshUserPositions(
+    user.id,
+    Date.now() + config.engine.tickIntervalMs + 1000,
+  );
+  assert.equal(added, 1);
+  assert.equal((await ticksModel.series(pos.id)).length, before + 1);
+});
+
+test('portfolio: snapshot totals come from the tick series', async () => {
+  const user = await usersModel.byEmail('unit@example.com');
+  const snap = await portfolio.snapshot(user.id);
   assert.equal(snap.hasPositions, true);
   assert.equal(snap.totalPrincipalCents, 250000);
-  const latest = ticksModel.latest(snap.positions[0].id);
+  const latest = await ticksModel.latest(snap.positions[0].id);
   assert.equal(snap.totalValueCents, latest.value_cents);
   assert.equal(snap.allocation.length, 1);
   assert.equal(snap.allocation[0].weight, 1);
 });
 
-test('portfolio: early withdrawal preview applies the year-1 penalty', () => {
-  const user = usersModel.byEmail('unit@example.com');
-  const pos = positionsModel.activeByUser(user.id)[0];
-  const preview = portfolio.earlyWithdrawalPreview(pos);
+test('portfolio: early withdrawal preview applies the year-1 penalty', async () => {
+  const user = await usersModel.byEmail('unit@example.com');
+  const pos = (await positionsModel.activeByUser(user.id))[0];
+  const preview = await portfolio.earlyWithdrawalPreview(pos);
   assert.equal(preview.mature, false);
   assert.equal(preview.penaltyPct, config.terms.penaltySchedule[0].penaltyPct);
   assert.equal(preview.penaltyCents, Math.round(preview.valueCents * preview.penaltyPct));
   assert.equal(preview.netCents, preview.valueCents - preview.penaltyCents);
 });
 
-test('portfolio: matured positions carry no penalty', () => {
-  const user = usersModel.byEmail('unit@example.com');
+test('portfolio: matured positions carry no penalty', async () => {
+  const user = await usersModel.byEmail('unit@example.com');
   const now = new Date();
-  const pos = positionsModel.create({
+  const pos = await positionsModel.create({
     userId: user.id,
     poolId: 'pool_stocks',
     principalCents: 100000,
     depositedAt: new Date(now.getTime() - 4 * 365.25 * timeUtil.DAY_MS).toISOString(),
     lockEndAt: new Date(now.getTime() - 365.25 * timeUtil.DAY_MS).toISOString(),
   });
-  engine.backfillPosition(pos);
-  const preview = portfolio.earlyWithdrawalPreview(pos);
+  await engine.backfillPosition(pos);
+  const preview = await portfolio.earlyWithdrawalPreview(pos);
   assert.equal(preview.mature, true);
   assert.equal(preview.penaltyCents, 0);
   assert.equal(preview.netCents, preview.valueCents);
 });
 
-test('users: cash balance credits accumulate', () => {
-  const user = usersModel.byEmail('unit@example.com');
-  const before = usersModel.byId(user.id).cash_balance_cents;
-  usersModel.creditCash(user.id, 12345);
-  usersModel.creditCash(user.id, 55);
-  assert.equal(usersModel.byId(user.id).cash_balance_cents, before + 12400);
+test('users: cash balance credits accumulate', async () => {
+  const user = await usersModel.byEmail('unit@example.com');
+  const before = (await usersModel.byId(user.id)).cash_balance_cents;
+  await usersModel.creditCash(user.id, 12345);
+  await usersModel.creditCash(user.id, 55);
+  assert.equal((await usersModel.byId(user.id)).cash_balance_cents, before + 12400);
 });
 
-test('engine: step size scales with the day fraction', () => {
-  const pool = poolsModel.bySlug('forex');
+test('engine: step size scales with the day fraction', async () => {
+  const pool = await poolsModel.bySlug('forex');
   const rngA = mulberry32(7);
   const rngB = mulberry32(7);
   // With the same randomness, a tiny fraction of a day must move the value
@@ -204,8 +223,8 @@ test('engine: step size scales with the day fraction', () => {
   assert.ok(tiny < 0.005, `intraday step too large: ${tiny}`);
 });
 
-test('engine: syntheticPoolSeries is stable across calls', () => {
-  const pool = poolsModel.bySlug('forex');
+test('engine: syntheticPoolSeries is stable across calls', async () => {
+  const pool = await poolsModel.bySlug('forex');
   const s1 = engine.syntheticPoolSeries(pool, 30);
   const s2 = engine.syntheticPoolSeries(pool, 30);
   assert.equal(s1.length, 31);
@@ -214,7 +233,7 @@ test('engine: syntheticPoolSeries is stable across calls', () => {
 
 test.after(() => {
   try {
-    db.close();
+    client.close();
     require('fs').rmSync(process.env.DB_FILE, { force: true });
     require('fs').rmSync(process.env.DB_FILE + '-wal', { force: true });
     require('fs').rmSync(process.env.DB_FILE + '-shm', { force: true });

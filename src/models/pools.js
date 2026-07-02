@@ -1,13 +1,9 @@
 'use strict';
 
-const { db } = require('../db');
-
-const all = db.prepare('SELECT * FROM pools ORDER BY sort_order ASC');
-const byId = db.prepare('SELECT * FROM pools WHERE id = ?');
-const bySlug = db.prepare('SELECT * FROM pools WHERE slug = ?');
+const { get, all } = require('../db');
 
 module.exports = {
-  all: () => all.all(),
-  byId: (id) => byId.get(id),
-  bySlug: (slug) => bySlug.get(slug),
+  all: () => all('SELECT * FROM pools ORDER BY sort_order ASC'),
+  byId: (id) => get('SELECT * FROM pools WHERE id = ?', [id]),
+  bySlug: (slug) => get('SELECT * FROM pools WHERE slug = ?', [slug]),
 };

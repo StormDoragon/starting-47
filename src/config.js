@@ -48,13 +48,21 @@ const config = {
   },
 
   db: {
-    file:
-      process.env.DB_FILE ||
-      path.join(__dirname, '..', 'data', 'meridian.db'),
+    // libSQL URL. Locally this is an embedded SQLite file (`file:...`); on
+    // Vercel/production point it at a hosted Turso/libSQL database
+    // (`libsql://<db>.turso.io`) and set DB_AUTH_TOKEN.
+    url:
+      process.env.DB_URL ||
+      `file:${process.env.DB_FILE || path.join(__dirname, '..', 'data', 'meridian.db')}`,
+    authToken: process.env.DB_AUTH_TOKEN || undefined,
   },
 
   // Simulated performance engine
   engine: {
+    // 'interval' — a long-running loop appends ticks (local/server hosting).
+    // 'lazy' — ticks are generated on portfolio reads + a daily cron
+    //          (serverless hosting, e.g. Vercel, where no loop can run).
+    mode: process.env.ENGINE_MODE || (process.env.VERCEL ? 'lazy' : 'interval'),
     // How often the live engine appends a new tick to open positions.
     tickIntervalMs: Number(process.env.TICK_INTERVAL_MS) || 5000,
     // Days of history to backfill when a position is opened.
@@ -64,6 +72,9 @@ const config = {
     // so values move visibly in a demo without compounding a full day's
     // return every few seconds.
     simSpeed: Number(process.env.SIM_SPEED) || 360,
+    // Bearer token that authorises the /api/cron/tick endpoint (Vercel Cron
+    // sends it as `Authorization: Bearer <CRON_SECRET>`).
+    cronSecret: process.env.CRON_SECRET || null,
   },
 
   security: {

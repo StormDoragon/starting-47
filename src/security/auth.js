@@ -3,28 +3,31 @@
 const usersModel = require('../models/users');
 
 /** Attach the current user (if any) to req/res.locals for every request. */
-function attachUser(req, res, next) {
-  let user = null;
-  if (req.session && req.session.user && req.session.user.id) {
-    user = usersModel.byId(req.session.user.id);
-    if (user) {
-      // Never expose secrets to templates.
-      const safe = {
-        id: user.id,
-        email: user.email,
-        displayName: user.display_name,
-        kycStatus: user.kyc_status,
-        totpEnabled: !!user.totp_enabled,
-        cashBalanceCents: user.cash_balance_cents || 0,
-      };
-      req.user = safe;
-      res.locals.currentUser = safe;
-    } else {
-      req.session.user = null;
+async function attachUser(req, res, next) {
+  try {
+    if (req.session && req.session.user && req.session.user.id) {
+      const user = await usersModel.byId(req.session.user.id);
+      if (user) {
+        // Never expose secrets to templates.
+        const safe = {
+          id: user.id,
+          email: user.email,
+          displayName: user.display_name,
+          kycStatus: user.kyc_status,
+          totpEnabled: !!user.totp_enabled,
+          cashBalanceCents: user.cash_balance_cents || 0,
+        };
+        req.user = safe;
+        res.locals.currentUser = safe;
+      } else {
+        req.session.user = null;
+      }
     }
+    res.locals.currentUser = res.locals.currentUser || null;
+    next();
+  } catch (err) {
+    next(err);
   }
-  res.locals.currentUser = res.locals.currentUser || null;
-  next();
 }
 
 /** Require a fully-authenticated session (2FA already satisfied). */
