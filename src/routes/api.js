@@ -50,6 +50,7 @@ router.get('/portfolio', requireAuth, (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({
     ts: Date.now(),
+    cashBalanceCents: req.user.cashBalanceCents,
     totalValueCents: snap.totalValueCents,
     totalPrincipalCents: snap.totalPrincipalCents,
     totalGainCents: snap.totalGainCents,

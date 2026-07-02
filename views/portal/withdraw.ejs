@@ -19,7 +19,13 @@
   </div>
 <% } else { %>
 
-  <p class="small text-muted mb-3">Positions are locked for <%= terms.lockYears %> years. Withdrawing before maturity applies a penalty, shown below and confirmed before any request. All withdrawals are simulated — no real payout occurs.</p>
+  <div class="card card-pad mb-3" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <div>
+      <div class="tiny text-muted">Available cash (virtual)</div>
+      <div class="mono" style="font-size:1.3rem"><%= money.formatCents(currentUser.cashBalanceCents) %></div>
+    </div>
+    <span class="small text-muted" style="max-width:520px">Withdrawn funds settle here instantly (simulated — no real payout). Positions are locked for <%= terms.lockYears %> years; early withdrawal applies the penalty shown on each position and is confirmed before any request.</span>
+  </div>
 
   <div class="grid grid-2">
     <% positions.forEach(function(item){

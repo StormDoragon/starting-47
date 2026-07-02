@@ -12,8 +12,10 @@ function poolChart(pool, days = 180) {
   const series = engine.syntheticPoolSeries(pool, days);
   return {
     slug: pool.slug,
+    name: pool.name,
     accent: pool.accent,
     points: series.map((p) => p.v),
+    dates: series.map((p) => p.t.slice(0, 10)),
   };
 }
 
@@ -21,10 +23,24 @@ router.get('/', (req, res) => {
   const pools = poolsModel.all();
   // Snapshot performance for the homepage "performance snapshot" chart.
   const snapshot = pools.map((p) => poolChart(p, 180));
+
+  // Hero stat: what the minimum deposit, split evenly, would have become over
+  // this window — computed from the same simulated series the chart shows.
+  const blendedEnd =
+    snapshot.reduce((a, s) => a + s.points[s.points.length - 1], 0) / snapshot.length;
+  const heroFromCents = config.terms.minDeposit * 100;
+  const heroToCents = Math.round((heroFromCents * blendedEnd) / 100);
+  const hero = {
+    fromCents: heroFromCents,
+    toCents: heroToCents,
+    gainPct: (heroToCents - heroFromCents) / heroFromCents,
+  };
+
   res.render('marketing/home', {
     title: `${config.brand.name} — ${config.brand.tagline}`,
     pools,
     snapshot,
+    hero,
   });
 });
 

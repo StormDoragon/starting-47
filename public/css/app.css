@@ -238,6 +238,30 @@ section { padding: 84px 0; }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
 .legend-item { display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--muted); }
 .legend-item .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.legend-row { padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* Hover readout for charts — one shared, fixed-position element. */
+.chart-tip {
+  display: none;
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  min-width: 120px;
+  max-width: 260px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.chart-tip .tip-head { color: var(--faint); font-size: 0.72rem; margin-bottom: 4px; font-family: var(--font-mono); }
+.chart-tip .tip-row { display: flex; align-items: center; gap: 8px; }
+.chart-tip .tip-key { width: 10px; height: 3px; border-radius: 2px; flex: none; }
+.chart-tip .tip-val { color: var(--text); font-weight: 600; font-family: var(--font-mono); }
+.chart-tip .tip-label { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+canvas:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
 
 /* ---- Stat tiles --------------------------------------------------------- */
 .stat { padding: 20px 22px; }

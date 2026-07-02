@@ -45,6 +45,10 @@ router.post('/onboarding', sensitiveLimiter, (req, res, next) => {
   const val = v.validator();
   val.check('full_name', form.full_name.length >= 2, 'Enter your full legal name.');
   val.check('dob', /^\d{4}-\d{2}-\d{2}$/.test(form.dob), 'Enter your date of birth.');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(form.dob)) {
+    const age = (Date.now() - new Date(form.dob).getTime()) / (365.25 * 24 * 3600 * 1000);
+    val.check('dob', age >= 18 && age < 120, 'You must be at least 18 years old.');
+  }
   val.check('country', form.country.length >= 2, 'Select your country.');
   val.check('address', form.address.length >= 5, 'Enter your residential address.');
   val.check('id_doc_type', form.id_doc_type.length >= 2, 'Choose an ID document type.');
@@ -111,12 +115,23 @@ router.post('/deposit', sensitiveLimiter, requireKyc, (req, res, next) => {
     form.amounts[pool.id] = v.clean(raw);
     if (!raw || v.clean(raw) === '') continue;
     const cents = v.parseMoney(raw);
-    if (cents === null) {
+    if (cents === null && !/^0+(\.0{1,2})?$/.test(v.clean(raw))) {
       return res.status(422).render('portal/deposit', {
         title: 'Fund your account',
         pools,
         form,
         errors: { form: `Enter a valid amount for ${pool.name}.` },
+      });
+    }
+    if (!cents) continue; // "0" means: skip this pool
+    if (cents > config.terms.maxDeposit * 100) {
+      return res.status(422).render('portal/deposit', {
+        title: 'Fund your account',
+        pools,
+        form,
+        errors: {
+          form: `The maximum per pool in this demo is ${config.terms.currency} ${config.terms.maxDeposit.toLocaleString()}.`,
+        },
       });
     }
     allocations.push({ pool, cents });
@@ -195,6 +210,7 @@ router.post('/withdraw/:positionId', sensitiveLimiter, requireKyc, (req, res, ne
     const preview = portfolio.earlyWithdrawalPreview(pos);
     if (preview.mature) {
       positionsModel.markWithdrawn(pos.id);
+      usersModel.creditCash(req.user.id, preview.netCents);
       transactionsModel.create({
         userId: req.user.id,
         positionId: pos.id,
@@ -204,7 +220,7 @@ router.post('/withdraw/:positionId', sensitiveLimiter, requireKyc, (req, res, ne
         meta: { mature: true },
       });
       audit.log(req.user.id, 'withdrawal.completed', `position=${pos.id}`, req);
-      req.flash('success', 'Matured position withdrawn to your virtual balance (simulated).');
+      req.flash('success', 'Matured position withdrawn to your virtual cash balance (simulated).');
       return res.redirect('/portal');
     }
 
@@ -214,12 +230,15 @@ router.post('/withdraw/:positionId', sensitiveLimiter, requireKyc, (req, res, ne
       return res.redirect('/portal/withdraw');
     }
     positionsModel.markWithdrawn(pos.id);
+    // Simulated processing settles instantly: the net amount (after penalty)
+    // lands in the virtual cash balance right away.
+    usersModel.creditCash(req.user.id, preview.netCents);
     transactionsModel.create({
       userId: req.user.id,
       positionId: pos.id,
       type: 'withdrawal_request',
       amountCents: preview.netCents,
-      status: 'pending',
+      status: 'completed',
       meta: {
         early: true,
         penaltyPct: preview.penaltyPct,
@@ -235,7 +254,7 @@ router.post('/withdraw/:positionId', sensitiveLimiter, requireKyc, (req, res, ne
     );
     req.flash(
       'success',
-      `Early-withdrawal request submitted (simulated — no real payout). A ${(preview.penaltyPct * 100).toFixed(0)}% penalty was applied.`,
+      `Early withdrawal processed (simulated — no real payout). A ${(preview.penaltyPct * 100).toFixed(0)}% penalty was applied; the net amount was credited to your virtual cash balance.`,
     );
     res.redirect('/portal');
   } catch (err) {

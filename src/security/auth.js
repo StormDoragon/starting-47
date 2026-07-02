@@ -15,6 +15,7 @@ function attachUser(req, res, next) {
         displayName: user.display_name,
         kycStatus: user.kyc_status,
         totpEnabled: !!user.totp_enabled,
+        cashBalanceCents: user.cash_balance_cents || 0,
       };
       req.user = safe;
       res.locals.currentUser = safe;
