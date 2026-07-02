@@ -27,8 +27,10 @@ function createApp() {
   const sessionStore = new SqliteStore();
   app.set('sessionStore', sessionStore);
 
-  // Behind the demo/proxy, trust the first proxy hop for secure cookies + IPs.
-  app.set('trust proxy', 1);
+  // Trust proxy hops only when configured. Vercel/proxied production deployments
+  // should set TRUST_PROXY_HOPS=1 so secure cookies and client IPs resolve
+  // correctly; local development keeps direct-client semantics by default.
+  app.set('trust proxy', config.trustProxy);
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, '..', 'views'));
