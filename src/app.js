@@ -129,4 +129,10 @@ function createApp() {
   return app;
 }
 
-module.exports = { createApp };
+// Vercel may trace this file directly through api/app.js. Export a real Express
+// server function as the CommonJS default so the Node runtime always sees a
+// valid handler, while keeping createApp available for tests and local boot.
+const app = createApp();
+module.exports = app;
+module.exports.default = app;
+module.exports.createApp = createApp;
