@@ -23,8 +23,23 @@ let base;
 
 const jar = new Map();
 
+/**
+ * Read individual Set-Cookie headers in a way that works across Node 18+.
+ * `Headers.getSetCookie()` only exists on newer undici builds; when it's
+ * missing we split the comma-joined `set-cookie` value back into cookies —
+ * splitting only on a comma that precedes a `name=` pair, so commas inside an
+ * `Expires=Wed, 02 Jul ...` attribute don't cause a false split.
+ */
+function setCookieLines(res) {
+  if (typeof res.headers.getSetCookie === 'function') {
+    return res.headers.getSetCookie();
+  }
+  const raw = res.headers.get('set-cookie');
+  return raw ? raw.split(/,(?=\s*[^;,\s]+=)/) : [];
+}
+
 function storeCookies(res) {
-  for (const line of res.headers.getSetCookie()) {
+  for (const line of setCookieLines(res)) {
     const [pair] = line.split(';');
     const eq = pair.indexOf('=');
     const name = pair.slice(0, eq).trim();

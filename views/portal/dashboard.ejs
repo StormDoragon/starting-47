@@ -14,11 +14,24 @@
 <%- include('../partials/flash') %>
 
 <% if (!snap.hasPositions) { %>
+  <% if (currentUser.cashBalanceCents > 0) { %>
+    <div class="card stat mb-3" style="max-width:360px">
+      <div class="label">Available cash</div>
+      <div class="value"><%= money.formatCents(currentUser.cashBalanceCents) %></div>
+      <div class="sub text-muted">virtual — from your withdrawn positions</div>
+    </div>
+  <% } %>
   <div class="card card-pad text-center" style="padding:64px 26px">
     <%- include('../partials/icon', { name: 'wallet', size: 34 }) %>
-    <h2 class="mt-2">Your portfolio is empty</h2>
-    <p class="lead narrow">Make your first deposit to start a live, simulated portfolio across four managed pools.</p>
-    <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Fund your account →</a>
+    <% if (currentUser.cashBalanceCents > 0) { %>
+      <h2 class="mt-2">No active positions</h2>
+      <p class="lead narrow">Your positions have all been withdrawn — the proceeds are in your virtual cash balance above. Deposit again to start a new simulated portfolio.</p>
+      <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Deposit again →</a>
+    <% } else { %>
+      <h2 class="mt-2">Your portfolio is empty</h2>
+      <p class="lead narrow">Make your first deposit to start a live, simulated portfolio across four managed pools.</p>
+      <a href="/portal/deposit" class="btn btn-primary btn-lg mt-1">Fund your account →</a>
+    <% } %>
   </div>
 <% } else { %>
 
