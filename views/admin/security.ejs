@@ -1,0 +1,120 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>Security</h1>
+  </div>
+  <span class="pill <%= stats.failedLogins7d ? 'pill-down' : 'pill-up' %>"><span class="dot"></span><%= stats.failedLogins7d %> failed login<%= stats.failedLogins7d===1?'':'s' %> (7d)</span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Security KPIs -->
+<div class="kpi-row">
+  <div class="card stat">
+    <div class="label">2FA adoption</div>
+    <% var twofaPct = (stats.clients + stats.admins) ? (stats.twofaUsers / (stats.clients + stats.admins)) : 0; %>
+    <div class="value"><%= (twofaPct*100).toFixed(0) %>%</div>
+    <div class="sub text-muted"><%= stats.twofaUsers %> of <%= stats.clients + stats.admins %> accounts</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Active sessions</div>
+    <div class="value"><%= stats.activeSessions %></div>
+    <div class="sub text-muted">unexpired session rows</div>
+  </div>
+  <div class="card stat">
+    <div class="label">KYC approved</div>
+    <div class="value text-up"><%= stats.kyc.approved || 0 %></div>
+    <div class="sub text-muted"><%= stats.kyc.pending || 0 %> pending · <%= stats.kyc.rejected || 0 %> rejected</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Failed logins (7d)</div>
+    <div class="value <%= stats.failedLogins7d ? 'text-down' : 'text-up' %>"><%= stats.failedLogins7d %></div>
+    <div class="sub text-muted">brute-force indicator</div>
+  </div>
+</div>
+
+<!-- Posture + sessions -->
+<div class="grid" style="grid-template-columns:1fr 1.4fr;gap:22px;align-items:start">
+  <div class="card card-pad">
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'shield', size: 18 }) %> Security posture</h3>
+    <p class="tiny text-muted mb-2">Live from the app's own middleware configuration — what protections are switched on for this build.</p>
+    <% posture.forEach(function(item){ %>
+      <div class="flex justify-between items-center legend-row">
+        <span class="small"><%= item.name %></span>
+        <span class="tiny <%= item.on ? 'text-up' : 'text-muted' %>"><%= item.on ? '● ' : '○ ' %><%= item.value %></span>
+      </div>
+    <% }) %>
+  </div>
+
+  <div>
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'globe', size: 18 }) %> Active sessions</h3>
+    <div class="card" style="overflow-x:auto">
+      <table class="table">
+        <thead><tr><th>Account</th><th>Device</th><th>IP</th><th class="text-right">Last seen</th><th class="text-right">Action</th></tr></thead>
+        <tbody>
+          <% if (!sessions.length) { %><tr><td colspan="5" class="text-muted text-center" style="padding:20px">No active sessions.</td></tr><% } %>
+          <% sessions.forEach(function(s){ var mine = s.sid === currentSid; %>
+            <tr>
+              <td class="small">
+                <% if (s.user_id) { %><a href="/admin/clients/<%= s.user_id %>"><%= s.user_email %></a><% } else { %><span class="text-muted">anonymous</span><% } %>
+                <% if (s.is_admin) { %><span class="pill pill-gold" style="padding:1px 7px">admin</span><% } %>
+                <% if (mine) { %><span class="pill pill-up" style="padding:1px 7px">you</span><% } %>
+              </td>
+              <td class="small text-muted"><%= (s.user_agent||'Unknown').slice(0,36) %></td>
+              <td class="small mono text-muted"><%= s.ip || '—' %></td>
+              <td class="text-right small text-muted"><%= time.formatDateTime(s.last_seen) %></td>
+              <td class="text-right">
+                <% if (!mine) { %>
+                  <form method="post" action="/admin/security/sessions/revoke" style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <input type="hidden" name="sid" value="<%= s.sid %>" />
+                    <button class="btn btn-ghost btn-sm" type="submit">Revoke</button>
+                  </form>
+                <% } else { %><span class="tiny text-muted">—</span><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Audit log -->
+<div class="flex justify-between items-center mt-3 mb-2 wrap gap-sm">
+  <h3 class="mb-0">Audit log</h3>
+  <form method="get" action="/admin/security" class="admin-toolbar">
+    <select class="select" name="event" aria-label="Filter by event" onchange="this.form.submit()">
+      <option value="">All events</option>
+      <% events.forEach(function(ev){ %>
+        <option value="<%= ev %>" <%= event===ev?'selected':'' %>><%= ev %></option>
+      <% }) %>
+    </select>
+    <noscript><button class="btn btn-primary btn-sm" type="submit">Filter</button></noscript>
+  </form>
+</div>
+
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Event</th><th>Account</th><th>Detail</th><th>IP</th><th>Device</th><th class="text-right">When</th></tr></thead>
+    <tbody>
+      <% if (!audit.length) { %><tr><td colspan="6" class="text-muted text-center" style="padding:22px">No matching events.</td></tr><% } %>
+      <% audit.forEach(function(a){ %>
+        <tr>
+          <td><span class="mono small <%= a.event.indexOf('failed')>=0?'text-down':'' %>"><%= a.event %></span></td>
+          <td class="small"><% if (a.user_id) { %><a href="/admin/clients/<%= a.user_id %>" class="text-muted"><%= a.user_email %></a><% } else { %><span class="text-muted">—</span><% } %></td>
+          <td class="small text-muted"><%= a.detail || '—' %></td>
+          <td class="small mono text-muted"><%= a.ip || '—' %></td>
+          <td class="small text-muted"><%= (a.user_agent||'—').slice(0,28) %></td>
+          <td class="text-right small text-muted"><%= time.formatDateTime(a.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/admin-pager', { page: page, pages: pages, base: '/admin/security?event=' + encodeURIComponent(event) + '&' }) %>
+
+<%- include('../partials/portal-foot') %>

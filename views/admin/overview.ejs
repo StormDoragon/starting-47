@@ -1,0 +1,195 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>Platform overview</h1>
+  </div>
+  <div class="flex gap-sm items-center wrap">
+    <span class="pill pill-up"><span class="live-dot"></span> Live</span>
+    <a href="/admin/kyc" class="btn btn-ghost btn-sm">KYC queue <% if (stats.pendingKyc) { %>· <%= stats.pendingKyc %><% } %></a>
+    <a href="/admin/clients" class="btn btn-primary btn-sm">View clients →</a>
+  </div>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Primary KPIs -->
+<div class="kpi-row">
+  <div class="card stat">
+    <div class="label">Assets under management</div>
+    <div class="value value-flash" data-live="aum"><%= money.formatCents(stats.aumCents) %></div>
+    <div class="sub text-muted"><%= money.formatCents0(stats.principalCents) %> principal · <span data-live="positions"><%= stats.activePositions %></span> positions</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Platform return</div>
+    <div class="value <%= stats.gainCents>=0?'text-up':'text-down' %>" data-live="gain"><%= (stats.gainCents>=0?'+':'') + money.formatCents(stats.gainCents) %></div>
+    <div class="sub <%= stats.gainCents>=0?'text-up':'text-down' %>" data-live="gainPct"><%= money.formatPct(stats.gainPct) %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Clients</div>
+    <div class="value"><%= stats.clients.toLocaleString('en-US') %></div>
+    <div class="sub text-muted">+<%= stats.newClients7d %> this week · <%= stats.activeInvestors %> invested</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Virtual cash held</div>
+    <div class="value" data-live="cash"><%= money.formatCents(stats.cashTotalCents) %></div>
+    <div class="sub text-muted">across all client balances</div>
+  </div>
+</div>
+
+<!-- Secondary KPIs -->
+<div class="kpi-row">
+  <div class="card stat">
+    <div class="label">Pending KYC</div>
+    <div class="value <%= stats.pendingKyc ? 'text-down' : '' %>"><%= stats.pendingKyc %></div>
+    <div class="sub text-muted"><a href="/admin/kyc">Review queue →</a></div>
+  </div>
+  <div class="card stat">
+    <div class="label">2FA adoption</div>
+    <% var twofaPct = stats.clients ? (stats.twofaUsers / (stats.clients + stats.admins)) : 0; %>
+    <div class="value"><%= (twofaPct*100).toFixed(0) %>%</div>
+    <div class="sub text-muted"><%= stats.twofaUsers %> account<%= stats.twofaUsers===1?'':'s' %> protected</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Active sessions</div>
+    <div class="value"><%= stats.activeSessions %></div>
+    <div class="sub text-muted"><a href="/admin/security">Security log →</a></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Failed logins (7d)</div>
+    <div class="value <%= stats.failedLogins7d ? 'text-down' : 'text-up' %>"><%= stats.failedLogins7d %></div>
+    <div class="sub text-muted">across the platform</div>
+  </div>
+</div>
+
+<!-- AUM curve + allocation -->
+<div class="grid" style="grid-template-columns:1.7fr 1fr;gap:22px;align-items:start">
+  <div class="card card-pad">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="mb-0">Assets under management</h3>
+      <span class="tiny text-muted mono">simulated · all active positions</span>
+    </div>
+    <canvas class="chart" data-admin-aum style="height:280px" role="img" aria-label="Platform assets under management over time, simulated"></canvas>
+  </div>
+
+  <div class="card card-pad">
+    <h3 class="mb-2">Capital by pool</h3>
+    <div class="donut-wrap">
+      <div style="width:170px;flex:none">
+        <canvas data-admin-donut style="width:100%;height:170px" role="img" aria-label="Assets under management by pool"></canvas>
+      </div>
+      <div style="flex:1;min-width:0" data-admin-legend>
+        <% stats.poolBreakdown.forEach(function(p){ if (!p.value_cents) return; %>
+          <div class="flex justify-between items-center legend-row">
+            <span class="legend-item"><span class="swatch" style="background:<%= p.accent %>"></span><%= p.name %></span>
+            <span class="mono small"><%= money.formatCents0(p.value_cents) %></span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pool breakdown table -->
+<h3 class="mt-3 mb-2">Investment pools</h3>
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Pool</th><th>Risk</th><th class="text-right">Investors</th><th class="text-right">Positions</th><th class="text-right">Principal</th><th class="text-right">Value</th><th class="text-right">Return</th></tr></thead>
+    <tbody>
+      <% stats.poolBreakdown.forEach(function(p){
+           var gain = p.value_cents - p.principal_cents;
+           var gainPct = p.principal_cents ? gain / p.principal_cents : 0; %>
+        <tr>
+          <td><span class="legend-item"><span class="swatch" style="background:<%= p.accent %>"></span><strong><%= p.name %></strong></span></td>
+          <td class="small text-muted"><%= p.risk_profile %></td>
+          <td class="text-right num"><%= p.investors %></td>
+          <td class="text-right num"><%= p.positions %></td>
+          <td class="text-right num"><%= money.formatCents0(p.principal_cents) %></td>
+          <td class="text-right num"><%= money.formatCents0(p.value_cents) %></td>
+          <td class="text-right num <%= gain>=0?'text-up':'text-down' %>"><%= money.formatPct(gainPct) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Money flow -->
+<div class="grid grid-3 mt-3">
+  <div class="card stat">
+    <div class="label">Total deposits</div>
+    <div class="value text-up"><%= money.formatCents0(stats.flow.deposit.total_cents) %></div>
+    <div class="sub text-muted"><%= stats.flow.deposit.n %> transaction<%= stats.flow.deposit.n===1?'':'s' %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Withdrawals settled</div>
+    <div class="value text-down"><%= money.formatCents0(stats.flow.withdrawal.total_cents + stats.flow.withdrawal_request.total_cents) %></div>
+    <div class="sub text-muted"><%= stats.flow.withdrawal.n + stats.flow.withdrawal_request.n %> transaction<%= (stats.flow.withdrawal.n + stats.flow.withdrawal_request.n)===1?'':'s' %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Net inflow</div>
+    <% var net = stats.flow.deposit.total_cents - stats.flow.withdrawal.total_cents - stats.flow.withdrawal_request.total_cents; %>
+    <div class="value <%= net>=0?'text-up':'text-down' %>"><%= money.formatCents0(net) %></div>
+    <div class="sub text-muted">deposits − withdrawals</div>
+  </div>
+</div>
+
+<!-- Activity feeds -->
+<div class="grid grid-2 mt-3" style="align-items:start">
+  <div class="card card-pad">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="mb-0">Newest clients</h3>
+      <a href="/admin/clients" class="tiny">All clients →</a>
+    </div>
+    <% if (!recentSignups.length) { %><p class="small text-muted">No clients yet.</p><% } %>
+    <% recentSignups.forEach(function(u){ %>
+      <div class="flex justify-between items-center legend-row">
+        <span class="legend-item">
+          <span class="avatar avatar-sm"><%= (u.display_name||u.email||'U').charAt(0).toUpperCase() %></span>
+          <a href="/admin/clients/<%= u.id %>"><%= u.display_name || u.email %></a>
+        </span>
+        <span class="tiny text-muted"><span class="pill <%= u.kyc_status==='approved'?'pill-up':(u.kyc_status==='pending'?'pill-info':'pill') %>" style="padding:2px 8px"><%= u.kyc_status %></span> <%= time.formatDate(u.created_at) %></span>
+      </div>
+    <% }) %>
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="mb-0">Recent transactions</h3>
+      <a href="/admin/transactions" class="tiny">Ledger →</a>
+    </div>
+    <% if (!recentTransactions.length) { %><p class="small text-muted">No transactions yet.</p><% } %>
+    <% recentTransactions.forEach(function(t){
+         var label = t.type==='deposit'?'Deposit':(t.type==='withdrawal'?'Withdrawal':'Withdrawal req.');
+         var cls = t.type==='deposit'?'pill-up':'pill-down';
+         var sign = t.type==='deposit'?'':'−'; %>
+      <div class="flex justify-between items-center legend-row">
+        <span class="small"><span class="pill <%= cls %>" style="padding:2px 8px"><%= label %></span> <a href="/admin/clients/<%= t.user_id %>" class="text-muted"><%= t.user_name || t.user_email %></a></span>
+        <span class="mono small"><%= sign + money.formatCents(t.amount_cents) %></span>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<h3 class="mt-3 mb-2">Recent security events</h3>
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Event</th><th>Account</th><th>Detail</th><th>IP</th><th class="text-right">When</th></tr></thead>
+    <tbody>
+      <% if (!recentAudit.length) { %><tr><td colspan="5" class="text-muted text-center" style="padding:20px">No activity yet.</td></tr><% } %>
+      <% recentAudit.forEach(function(a){ %>
+        <tr>
+          <td><span class="mono small <%= a.event.indexOf('failed')>=0?'text-down':'' %>"><%= a.event %></span></td>
+          <td class="small"><% if (a.user_id) { %><a href="/admin/clients/<%= a.user_id %>" class="text-muted"><%= a.user_email %></a><% } else { %><span class="text-muted">—</span><% } %></td>
+          <td class="small text-muted"><%= a.detail || '—' %></td>
+          <td class="small mono text-muted"><%= a.ip || '—' %></td>
+          <td class="text-right small text-muted"><%= time.formatDateTime(a.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<script type="application/json" id="admin-init"><%- JSON.stringify({ aumSeries: aumSeries, poolBreakdown: stats.poolBreakdown.map(function(p){ return { poolId: p.pool_id, name: p.name, accent: p.accent, valueCents: p.value_cents }; }) }) %></script>
+
+<%- include('../partials/portal-foot', { scripts: ['/js/charts.js', '/js/admin.js'] }) %>

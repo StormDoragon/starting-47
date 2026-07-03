@@ -53,6 +53,11 @@ router.post('/register', authLimiter, redirectIfAuthed, (req, res, next) => {
 
   try {
     const user = usersModel.create({ email, password, displayName });
+    // Bootstrap: an account registered with the configured admin email is
+    // promoted to administrator immediately.
+    if (email === require('../config').admin.email) {
+      usersModel.setAdmin(user.id, true);
+    }
     audit.log(user.id, 'account.created', `email=${email}`, req);
     login(req, user, (err) => {
       if (err) return next(err);

@@ -24,6 +24,9 @@ function migrate() {
   if (!userCols.includes('cash_balance_cents')) {
     db.exec('ALTER TABLE users ADD COLUMN cash_balance_cents INTEGER NOT NULL DEFAULT 0');
   }
+  if (!userCols.includes('is_admin')) {
+    db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+  }
 }
 
 // Models prepare their statements at require time, so the schema must exist

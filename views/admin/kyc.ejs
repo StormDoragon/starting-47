@@ -1,0 +1,46 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>KYC review</h1>
+  </div>
+  <span class="pill <%= submissions.length ? 'pill-info' : 'pill-up' %>"><span class="dot"></span><%= submissions.length %> pending</span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<% if (!submissions.length) { %>
+  <div class="card card-pad text-center" style="padding:56px 26px">
+    <%- include('../partials/icon', { name: 'check', size: 32 }) %>
+    <h2 class="mt-2">Queue is clear</h2>
+    <p class="lead narrow">No identity verifications are awaiting review.</p>
+  </div>
+<% } else { %>
+  <div class="grid grid-2">
+    <% submissions.forEach(function(k){ %>
+      <div class="card card-pad">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="mb-0"><%= k.full_name %></h3>
+          <span class="pill pill-info" style="padding:2px 9px">pending</span>
+        </div>
+        <dl class="kv">
+          <div><dt>Account</dt><dd><a href="/admin/clients/<%= k.user_id %>"><%= k.user_email %></a></dd></div>
+          <div><dt>Date of birth</dt><dd><%= k.dob %></dd></div>
+          <div><dt>Country</dt><dd><%= k.country %></dd></div>
+          <div><dt>Address</dt><dd><%= k.address %></dd></div>
+          <div><dt>Document</dt><dd><%= k.id_doc_type %> · <span class="mono tiny"><%= k.id_doc_ref %></span></dd></div>
+          <div><dt>Submitted</dt><dd><%= time.formatDateTime(k.created_at) %></dd></div>
+        </dl>
+        <form method="post" action="/admin/kyc/<%= k.id %>" class="flex gap-sm mt-2">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button class="btn btn-primary btn-sm" name="decision" value="approve" type="submit">Approve</button>
+          <button class="btn btn-ghost btn-sm" name="decision" value="reject" type="submit">Reject</button>
+        </form>
+      </div>
+    <% }) %>
+  </div>
+  <p class="tiny text-muted mt-2">Nothing here is verified against a real identity service — this is a simulated review workflow for the demo.</p>
+<% } %>
+
+<%- include('../partials/portal-foot') %>

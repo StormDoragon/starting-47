@@ -15,6 +15,7 @@ function attachUser(req, res, next) {
         displayName: user.display_name,
         kycStatus: user.kyc_status,
         totpEnabled: !!user.totp_enabled,
+        isAdmin: !!user.is_admin,
         cashBalanceCents: user.cash_balance_cents || 0,
       };
       req.user = safe;
@@ -46,6 +47,23 @@ function requireKyc(req, res, next) {
   next();
 }
 
+/** Require an authenticated administrator (back-office dashboard). */
+function requireAdmin(req, res, next) {
+  if (!req.user || (req.session && req.session.pending2fa)) {
+    if (wantsJson(req)) return res.status(401).json({ error: 'Authentication required.' });
+    const next_ = encodeURIComponent(req.originalUrl);
+    return res.redirect(`/login?next=${next_}`);
+  }
+  if (!req.user.isAdmin) {
+    if (wantsJson(req)) return res.status(403).json({ error: 'Administrator access required.' });
+    return res.status(403).render('errors/403', {
+      title: 'Access denied',
+      message: 'This area is restricted to platform administrators.',
+    });
+  }
+  next();
+}
+
 /** Redirect already-authenticated users away from auth pages. */
 function redirectIfAuthed(req, res, next) {
   if (req.user) return res.redirect('/portal');
@@ -56,4 +74,4 @@ function wantsJson(req) {
   return req.xhr || (req.get('accept') || '').includes('application/json');
 }
 
-module.exports = { attachUser, requireAuth, requireKyc, redirectIfAuthed, wantsJson };
+module.exports = { attachUser, requireAuth, requireKyc, requireAdmin, redirectIfAuthed, wantsJson };

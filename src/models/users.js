@@ -57,6 +57,25 @@ function creditCash(userId, cents) {
   ).run(Math.round(cents), userId);
 }
 
+/** Grant or revoke administrator (back-office dashboard) access. */
+function setAdmin(userId, isAdmin) {
+  db.prepare(
+    "UPDATE users SET is_admin = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(isAdmin ? 1 : 0, userId);
+}
+
+/**
+ * Promote an existing account to admin by email. Used to bootstrap the first
+ * administrator from config without exposing a self-service path. Returns the
+ * updated user row, or null if no account with that email exists yet.
+ */
+function promoteByEmail(email) {
+  const user = byEmail.get(String(email || '').toLowerCase().trim());
+  if (!user) return null;
+  if (!user.is_admin) setAdmin(user.id, true);
+  return byId.get(user.id);
+}
+
 module.exports = {
   create,
   byEmail: (email) => byEmail.get(String(email || '').toLowerCase().trim()),
@@ -66,5 +85,7 @@ module.exports = {
   setKycStatus,
   setTotp,
   creditCash,
+  setAdmin,
+  promoteByEmail,
   touch: (id) => touch.run(id),
 };

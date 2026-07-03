@@ -1,0 +1,39 @@
+<%- include('head') %>
+<%
+  var section = (typeof adminSection !== 'undefined') ? adminSection : '';
+  var navItems = [
+    { key: 'overview',     href: '/admin',              icon: 'pulse',    label: 'Overview' },
+    { key: 'clients',      href: '/admin/clients',      icon: 'user',     label: 'Clients' },
+    { key: 'investments',  href: '/admin/investments',  icon: 'layers',   label: 'Investments' },
+    { key: 'transactions', href: '/admin/transactions', icon: 'exchange', label: 'Transactions' },
+    { key: 'security',     href: '/admin/security',     icon: 'shield',   label: 'Security' },
+    { key: 'kyc',          href: '/admin/kyc',          icon: 'check',    label: 'KYC review' },
+    { key: 'system',       href: '/admin/system',       icon: 'cpu',      label: 'System' }
+  ];
+%>
+<div class="portal-shell admin-shell">
+  <aside class="portal-side">
+    <a href="/admin" class="brand"><span class="mark"></span><%= brand.name %></a>
+    <span class="pill pill-gold admin-tag"><span class="dot"></span>Admin console</span>
+    <nav class="portal-nav">
+      <% navItems.forEach(function(item){ %>
+        <a href="<%= item.href %>" class="<%= section === item.key ? 'active' : '' %>"><%- include('icon', { name: item.icon, size: 18 }) %> <%= item.label %></a>
+      <% }) %>
+    </nav>
+    <nav class="portal-nav mt-2">
+      <a href="/portal"><%- include('icon', { name: 'wallet', size: 18 }) %> Investor view</a>
+    </nav>
+    <div class="side-user">
+      <div class="avatar"><%= (currentUser.displayName || currentUser.email || 'A').trim().charAt(0).toUpperCase() %></div>
+      <div style="min-width:0">
+        <div class="small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= currentUser.displayName || 'Administrator' %></div>
+        <div class="tiny text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= currentUser.email %></div>
+      </div>
+    </div>
+    <form method="post" action="/logout" class="mt-1">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-ghost btn-block btn-sm" type="submit"><%- include('icon', { name: 'logout', size: 16 }) %> Log out</button>
+    </form>
+    <p class="tiny text-muted mt-2" style="line-height:1.4"><%= brand.disclaimer %></p>
+  </aside>
+  <main class="portal-main">

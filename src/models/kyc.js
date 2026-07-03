@@ -11,6 +11,8 @@ const insert = db.prepare(`
 const byUser = db.prepare(
   'SELECT * FROM kyc_submissions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
 );
+const byId = db.prepare('SELECT * FROM kyc_submissions WHERE id = ?');
+const setStatus = db.prepare('UPDATE kyc_submissions SET status = ? WHERE id = ?');
 
 function create(data) {
   const id = newId('kyc');
@@ -20,4 +22,9 @@ function create(data) {
   return byUser.get(data.user_id);
 }
 
-module.exports = { create, byUser: (uid) => byUser.get(uid) };
+module.exports = {
+  create,
+  byUser: (uid) => byUser.get(uid),
+  byId: (id) => byId.get(id),
+  setStatus: (id, status) => setStatus.run(status, id),
+};
