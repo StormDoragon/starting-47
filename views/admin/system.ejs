@@ -1,0 +1,62 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>System</h1>
+  </div>
+  <span class="pill pill-up"><span class="live-dot"></span> <%= runtime.env %></span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<div class="grid grid-2" style="align-items:start">
+  <!-- Runtime -->
+  <div class="card card-pad">
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'cpu', size: 18 }) %> Runtime</h3>
+    <dl class="kv">
+      <div><dt>Node.js</dt><dd class="mono"><%= runtime.node %></dd></div>
+      <div><dt>Platform</dt><dd class="mono tiny"><%= runtime.platform %></dd></div>
+      <div><dt>Environment</dt><dd><%= runtime.env %><%= runtime.isVercel ? ' · Vercel' : '' %></dd></div>
+      <div><dt>Uptime</dt><dd><%= Math.floor(runtime.uptimeSec/3600) %>h <%= Math.floor((runtime.uptimeSec%3600)/60) %>m</dd></div>
+      <div><dt>Process</dt><dd class="mono">pid <%= runtime.pid %></dd></div>
+      <div><dt>Memory (RSS)</dt><dd class="mono"><%= runtime.rssMb %> MB · heap <%= runtime.heapUsedMb %> MB</dd></div>
+      <div><dt>CPUs</dt><dd class="mono"><%= runtime.cpus %> · load <%= runtime.loadavg %></dd></div>
+      <div><dt>Database</dt><dd class="mono tiny"><%= runtime.dbFile %></dd></div>
+    </dl>
+  </div>
+
+  <!-- Engine + terms -->
+  <div class="card card-pad">
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'pulse', size: 18 }) %> Performance engine</h3>
+    <dl class="kv">
+      <div><dt>Tick interval</dt><dd class="mono"><%= (engine.tickIntervalMs/1000) %>s</dd></div>
+      <div><dt>Backfill window</dt><dd class="mono"><%= engine.backfillDays %> days</dd></div>
+      <div><dt>Sim speed</dt><dd class="mono"><%= engine.simSpeed %>× wall-clock</dd></div>
+    </dl>
+    <hr class="divider" />
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'bank', size: 18 }) %> Product terms</h3>
+    <dl class="kv">
+      <div><dt>Minimum deposit</dt><dd class="mono">$<%= terms.minDeposit.toLocaleString('en-US') %></dd></div>
+      <div><dt>Lock period</dt><dd class="mono"><%= terms.lockYears %> years</dd></div>
+      <div><dt>Management fee</dt><dd class="mono"><%= (terms.managementFeePct*100).toFixed(2) %>% p.a.</dd></div>
+      <div><dt>Auto-approve KYC</dt><dd><%= demo.autoApproveKyc ? 'Yes (demo)' : 'No' %></dd></div>
+    </dl>
+  </div>
+</div>
+
+<!-- Table counts -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'layers', size: 18 }) %> Database</h3>
+<div class="grid grid-4">
+  <% Object.keys(tableCounts).forEach(function(t){ %>
+    <div class="card stat">
+      <div class="label"><%= t.replace(/_/g,' ') %></div>
+      <div class="value"><%= tableCounts[t].toLocaleString('en-US') %></div>
+      <div class="sub text-muted">rows</div>
+    </div>
+  <% }) %>
+</div>
+
+<p class="tiny text-muted mt-3"><%= brand.disclaimer %></p>
+
+<%- include('../partials/portal-foot') %>

@@ -1,0 +1,59 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>Clients</h1>
+  </div>
+  <span class="pill"><span class="dot"></span><%= total.toLocaleString('en-US') %> client<%= total===1?'':'s' %></span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<form method="get" action="/admin/clients" class="admin-toolbar">
+  <input class="input" type="search" name="q" value="<%= search %>" placeholder="Search by name or email…" aria-label="Search clients" />
+  <button class="btn btn-primary" type="submit">Search</button>
+  <% if (search) { %><a class="btn btn-ghost" href="/admin/clients">Clear</a><% } %>
+</form>
+
+<div class="card mt-2" style="overflow-x:auto">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Client</th><th>KYC</th><th class="text-center">2FA</th>
+        <th class="text-right">Positions</th><th class="text-right">Invested</th>
+        <th class="text-right">Deposited</th><th class="text-right">Cash</th>
+        <th class="text-right">Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!clients.length) { %>
+        <tr><td colspan="8" class="text-muted text-center" style="padding:26px">No clients match “<%= search %>”.</td></tr>
+      <% } %>
+      <% clients.forEach(function(u){ %>
+        <tr>
+          <td>
+            <a href="/admin/clients/<%= u.id %>" class="legend-item">
+              <span class="avatar avatar-sm"><%= (u.display_name||u.email||'U').charAt(0).toUpperCase() %></span>
+              <span style="min-width:0">
+                <span style="display:block;color:var(--text)"><%= u.display_name || '—' %><% if (u.is_admin) { %> <span class="pill pill-gold" style="padding:1px 7px">admin</span><% } %></span>
+                <span class="tiny text-muted"><%= u.email %></span>
+              </span>
+            </a>
+          </td>
+          <td><span class="pill <%= u.kyc_status==='approved'?'pill-up':(u.kyc_status==='pending'?'pill-info':(u.kyc_status==='rejected'?'pill-down':'pill')) %>" style="padding:2px 9px"><%= u.kyc_status %></span></td>
+          <td class="text-center"><% if (u.totp_enabled) { %><span class="text-up" title="2FA enabled">●</span><% } else { %><span class="text-muted" title="2FA off">○</span><% } %></td>
+          <td class="text-right num"><%= u.active_positions %></td>
+          <td class="text-right num"><%= money.formatCents0(u.invested_value_cents) %></td>
+          <td class="text-right num text-muted"><%= money.formatCents0(u.deposited_cents) %></td>
+          <td class="text-right num"><%= money.formatCents0(u.cash_balance_cents) %></td>
+          <td class="text-right small text-muted"><%= time.formatDate(u.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/admin-pager', { page: page, pages: pages, base: '/admin/clients?q=' + encodeURIComponent(search) + '&' }) %>
+
+<%- include('../partials/portal-foot') %>

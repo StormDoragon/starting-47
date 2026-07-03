@@ -1,0 +1,175 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow"><a href="/admin/clients">← Clients</a></span>
+    <h1><%= account.display_name || account.email %></h1>
+  </div>
+  <div class="flex gap-sm items-center wrap">
+    <span class="pill <%= account.kyc_status==='approved'?'pill-up':(account.kyc_status==='pending'?'pill-info':(account.kyc_status==='rejected'?'pill-down':'pill')) %>"><span class="dot"></span>KYC <%= account.kyc_status %></span>
+    <span class="pill <%= account.totp_enabled?'pill-up':'pill' %>"><span class="dot"></span>2FA <%= account.totp_enabled?'on':'off' %></span>
+    <% if (account.is_admin) { %><span class="pill pill-gold"><span class="dot"></span>Administrator</span><% } %>
+  </div>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Profile + KYC -->
+<div class="grid grid-2" style="align-items:start">
+  <div class="card card-pad">
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'user', size: 18 }) %> Profile</h3>
+    <dl class="kv">
+      <div><dt>Email</dt><dd class="mono"><%= account.email %></dd></div>
+      <div><dt>User ID</dt><dd class="mono tiny"><%= account.id %></dd></div>
+      <div><dt>Joined</dt><dd><%= time.formatDateTime(account.created_at) %></dd></div>
+      <div><dt>Invested value</dt><dd class="num"><%
+        var invested = positions.filter(function(p){return p.status==='active';}).reduce(function(a,p){return a+p.value_cents;},0);
+      %><%= money.formatCents(invested) %></dd></div>
+      <div><dt>Virtual cash</dt><dd class="num"><%= money.formatCents(account.cash_balance_cents) %></dd></div>
+    </dl>
+  </div>
+
+  <div class="card card-pad">
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'check', size: 18 }) %> KYC submission</h3>
+    <% if (!kyc) { %>
+      <p class="small text-muted">No identity submission on file.</p>
+    <% } else { %>
+      <dl class="kv">
+        <div><dt>Full name</dt><dd><%= kyc.full_name %></dd></div>
+        <div><dt>Date of birth</dt><dd><%= kyc.dob %></dd></div>
+        <div><dt>Country</dt><dd><%= kyc.country %></dd></div>
+        <div><dt>Address</dt><dd><%= kyc.address %></dd></div>
+        <div><dt>Document</dt><dd><%= kyc.id_doc_type %> · <span class="mono tiny"><%= kyc.id_doc_ref %></span></dd></div>
+        <div><dt>Submitted</dt><dd><%= time.formatDateTime(kyc.created_at) %></dd></div>
+      </dl>
+    <% } %>
+    <form method="post" action="/admin/clients/<%= account.id %>/kyc" class="flex gap-sm mt-2">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-primary btn-sm" name="decision" value="approve" <%= account.kyc_status==='approved'?'disabled':'' %>>Approve</button>
+      <button class="btn btn-ghost btn-sm" name="decision" value="reject" <%= account.kyc_status==='rejected'?'disabled':'' %>>Reject</button>
+    </form>
+  </div>
+</div>
+
+<!-- Admin actions -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'settings', size: 18 }) %> Account actions</h3>
+<div class="card card-pad">
+  <div class="flex gap wrap items-center justify-between">
+    <div>
+      <div class="small"><strong>Administrator access</strong></div>
+      <div class="tiny text-muted">Grants access to this back-office console.</div>
+    </div>
+    <form method="post" action="/admin/clients/<%= account.id %>/admin" data-confirm="Change administrator access for this account?">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <% if (account.is_admin) { %>
+        <input type="hidden" name="grant" value="no" />
+        <button class="btn btn-ghost btn-sm" type="submit" <%= account.id===currentUser.id?'disabled title="You cannot revoke your own access"':'' %>>Revoke admin</button>
+      <% } else { %>
+        <input type="hidden" name="grant" value="yes" />
+        <button class="btn btn-ghost btn-sm" type="submit">Make admin</button>
+      <% } %>
+    </form>
+  </div>
+  <hr class="divider" />
+  <div class="flex gap wrap items-center justify-between">
+    <div>
+      <div class="small"><strong>Active sessions</strong></div>
+      <div class="tiny text-muted">Force sign-out on every device except your own.</div>
+    </div>
+    <form method="post" action="/admin/clients/<%= account.id %>/sessions/revoke-all" data-confirm="Revoke all sessions for this client?">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-ghost btn-sm" type="submit" <%= sessions.length?'':'disabled' %>>Revoke all (<%= sessions.length %>)</button>
+    </form>
+  </div>
+</div>
+
+<!-- Positions -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'layers', size: 18 }) %> Positions</h3>
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Pool</th><th class="text-right">Principal</th><th class="text-right">Value</th><th class="text-right">Return</th><th>Deposited</th><th>Unlocks</th><th>Status</th></tr></thead>
+    <tbody>
+      <% if (!positions.length) { %><tr><td colspan="7" class="text-muted text-center" style="padding:22px">No positions.</td></tr><% } %>
+      <% positions.forEach(function(p){
+           var gain = p.value_cents - p.principal_cents;
+           var gainPct = p.principal_cents ? gain / p.principal_cents : 0;
+           var cd = countdown(p.lock_end_at); %>
+        <tr>
+          <td><span class="legend-item"><span class="swatch" style="background:<%= p.accent %>"></span><%= p.pool_name %></span></td>
+          <td class="text-right num"><%= money.formatCents(p.principal_cents) %></td>
+          <td class="text-right num"><%= money.formatCents(p.value_cents) %></td>
+          <td class="text-right num <%= gain>=0?'text-up':'text-down' %>"><%= money.formatPct(gainPct) %></td>
+          <td class="small text-muted"><%= time.formatDate(p.deposited_at) %></td>
+          <td class="small text-muted"><%= cd.past ? 'Matured' : time.formatDate(p.lock_end_at) %></td>
+          <td><span class="pill <%= p.status==='active'?'pill-up':'pill' %>" style="padding:2px 9px"><%= p.status %></span></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Transactions -->
+<h3 class="mt-3 mb-2"><%- include('../partials/icon', { name: 'exchange', size: 18 }) %> Transactions</h3>
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Type</th><th>Detail</th><th class="text-right">Amount</th><th>Status</th><th class="text-right">Date</th></tr></thead>
+    <tbody>
+      <% if (!transactions.length) { %><tr><td colspan="5" class="text-muted text-center" style="padding:22px">No transactions.</td></tr><% } %>
+      <% transactions.forEach(function(t){
+           var label = t.type==='deposit'?'Deposit':(t.type==='withdrawal'?'Withdrawal':'Withdrawal req.');
+           var cls = t.type==='deposit'?'pill-up':'pill-down';
+           var detail = t.meta ? (t.meta.pool ? t.meta.pool : (t.meta.early ? 'Early ('+Math.round(t.meta.penaltyPct*100)+'% penalty)' : (t.meta.mature?'Matured':'—'))) : '—';
+           var sign = t.type==='deposit'?'':'−'; %>
+        <tr>
+          <td><span class="pill <%= cls %>" style="padding:2px 9px"><%= label %></span></td>
+          <td class="small text-muted"><%= detail %><% if (t.meta && t.meta.method) { %> · <%= t.meta.method %><% } %></td>
+          <td class="text-right num"><%= sign + money.formatCents(t.amount_cents) %></td>
+          <td class="small <%= t.status==='completed'?'text-up':(t.status==='pending'?'text-muted':'text-down') %>"><%= t.status %></td>
+          <td class="text-right small text-muted"><%= time.formatDateTime(t.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Sessions + activity -->
+<div class="grid grid-2 mt-3" style="align-items:start">
+  <div>
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'globe', size: 18 }) %> Active sessions</h3>
+    <div class="card" style="overflow-x:auto">
+      <table class="table">
+        <thead><tr><th>Device</th><th>IP</th><th class="text-right">Last seen</th></tr></thead>
+        <tbody>
+          <% if (!sessions.length) { %><tr><td colspan="3" class="text-muted text-center" style="padding:18px">No active sessions.</td></tr><% } %>
+          <% sessions.forEach(function(s){ %>
+            <tr>
+              <td class="small"><%= (s.user_agent||'Unknown').slice(0,42) %></td>
+              <td class="small mono text-muted"><%= s.ip || '—' %></td>
+              <td class="text-right small text-muted"><%= time.formatDateTime(s.last_seen) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <h3 class="mb-2"><%- include('../partials/icon', { name: 'clock', size: 18 }) %> Activity log</h3>
+    <div class="card" style="overflow-x:auto">
+      <table class="table">
+        <thead><tr><th>Event</th><th>Detail</th><th class="text-right">When</th></tr></thead>
+        <tbody>
+          <% if (!activity.length) { %><tr><td colspan="3" class="text-muted text-center" style="padding:18px">No activity.</td></tr><% } %>
+          <% activity.forEach(function(a){ %>
+            <tr>
+              <td><span class="mono small <%= a.event.indexOf('failed')>=0?'text-down':'' %>"><%= a.event %></span></td>
+              <td class="small text-muted"><%= a.detail || '—' %></td>
+              <td class="text-right small text-muted"><%= time.formatDateTime(a.created_at) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/portal-foot') %>

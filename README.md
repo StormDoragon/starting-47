@@ -3,9 +3,10 @@
 > **Demo platform for portfolio purposes. Not a real investment offering.
 > No real funds are processed.**
 
-A polished, "global forex broker"–style marketing site plus a secure,
-authenticated investor portal — driven by a live **simulated performance
-engine**. Built to satisfy the spec in [`PLAN.md`](./PLAN.md).
+A polished, "global forex broker"–style marketing site, a secure,
+authenticated investor portal, and a full **back-office admin console** — all
+driven by a live **simulated performance engine**. Built to satisfy the spec
+in [`PLAN.md`](./PLAN.md).
 
 Every page carries the demo disclaimer. There are no real payment rails, no
 custody of funds, and no real investment products. "Deposits" credit a
@@ -45,7 +46,8 @@ No build step, no frontend framework, no CDN dependencies — it runs offline.
 
 ```bash
 npm install
-npm start        # http://localhost:3000 — schema + pool seed apply automatically
+npm run seed:demo   # create the admin + sample clients/positions (optional but recommended)
+npm start           # http://localhost:3000 — schema + pool seed apply automatically
 ```
 
 Useful scripts:
@@ -54,10 +56,48 @@ Useful scripts:
 npm test         # unit + end-to-end HTTP tests (throwaway database)
 npm run dev      # start with --watch
 npm run seed     # (re)seed the four pools explicitly
-npm run reset    # wipe the demo DB and re-seed
+npm run seed:demo # seed the admin account + a spread of demo clients with history
+npm run reset    # wipe the demo DB, then re-seed pools + demo data
 ```
 
 Configuration is via environment variables — see [`.env.example`](./.env.example).
+
+### Admin console
+
+The back-office console lives at **`/admin`** and is restricted to
+administrator accounts. `npm run seed:demo` creates one and prints the login:
+
+```
+admin@meridian.demo / Admin-Demo-2026!
+```
+
+Override with `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Any account whose email matches
+`ADMIN_EMAIL` is promoted to admin automatically — on boot if it already
+exists, or the moment it registers — so there is no self-service escalation
+path. Admins also get an **Admin console** link in the investor sidebar.
+
+The console surfaces, across the whole platform:
+
+- **Overview** — assets under management (live curve + capital-by-pool donut),
+  platform return, client/position counts, virtual cash held, pending KYC, 2FA
+  adoption, active sessions, failed-login count, per-pool breakdown, money-flow
+  totals, and recent signups / transactions / security events.
+- **Clients** — searchable, paginated roster with KYC, 2FA, position count,
+  invested value, lifetime deposits and cash; each opens a **deep view**
+  (profile, KYC submission, positions, transactions, sessions, activity log)
+  with KYC approve/reject, admin grant/revoke and force-logout actions.
+- **Investments** — per-pool capital breakdown and a filterable ledger of every
+  position across all clients.
+- **Transactions** — the full money-movement ledger with flow summary and type
+  filters.
+- **Security** — a live security-posture panel (read from the app's own
+  middleware config), all active sessions with revoke, and a filterable,
+  paginated site-wide audit log.
+- **KYC review** — the pending-verification queue with one-click decisions.
+- **System** — runtime, performance-engine and product-terms config, plus
+  per-table row counts.
+
+Overview figures and charts refresh live via `GET /admin/api/overview`.
 
 ## Architecture
 
@@ -68,20 +108,21 @@ src/
   app.js                  # express app: middleware, sessions, CSRF, routes
   db/
     schema.sql            # full schema (see Data model below)
-    index.js  seed.js  reset.js  pools.js
+    index.js  seed.js  seedDemo.js  reset.js  pools.js
   models/                 # thin repositories (prepared statements only)
-    users kyc pools positions ticks transactions audit
+    users kyc pools positions ticks transactions audit admin
   services/
     performanceEngine.js  # backfill + live GBM ticking (the core)
-    portfolio.js          # derives ALL dashboard numbers from the tick series
+    portfolio.js          # derives ALL investor dashboard numbers from the tick series
+    adminMetrics.js       # platform-wide AUM curve for the admin overview
     totp.js  random.js
   security/
     helmet.js csrf.js rateLimit.js validate.js auth.js sessionStore.js
   routes/
-    marketing.js auth.js portal.js api.js
+    marketing.js auth.js portal.js admin.js api.js
   utils/  money.js time.js id.js
-views/                    # EJS templates (marketing/, auth/, portal/, errors/, partials/)
-public/                   # css/app.css, js/app.js, js/charts.js, img/
+views/                    # EJS templates (marketing/, auth/, portal/, admin/, errors/, partials/)
+public/                   # css/app.css, js/app.js, js/charts.js, js/dashboard.js, js/admin.js, img/
 ```
 
 ### Data model (SQLite)
@@ -159,6 +200,21 @@ input validation + sanitisation, and parameterised queries throughout.
 - [x] Security/account settings — password change, TOTP 2FA (real QR enrolment),
       active-sessions list with revoke, security activity log
 
+**Admin console (`/admin`, admin-only)**
+
+- [x] Platform overview — live AUM curve + capital-by-pool donut, return,
+      client/position counts, cash held, pending KYC, 2FA adoption, active
+      sessions, failed logins, money-flow totals, recent-activity feeds
+- [x] Clients — searchable/paginated roster + per-client deep view
+- [x] Client actions — KYC approve/reject, admin grant/revoke, force-logout
+- [x] Investments — per-pool capital breakdown + all-positions ledger
+- [x] Transactions — site-wide money-movement ledger with filters
+- [x] Security — live posture panel, all sessions with revoke, audit log
+- [x] KYC review queue with one-click decisions
+- [x] System — runtime/engine/terms config + per-table row counts
+- [x] Access control — admin bootstrap by email, `requireAdmin` guard,
+      CSRF on every action
+
 **Security hygiene of the demo itself**
 
 - [x] bcrypt password hashing · [x] CSRF protection · [x] rate-limited auth
@@ -179,6 +235,10 @@ input validation + sanitisation, and parameterised queries throughout.
   rules and zero-skip, backfilled live portfolio API, early withdrawal
   (confirmation + penalty + cash credit), password change, full TOTP 2FA
   enrolment and challenged login, active sessions and the audit log.
+- **`test/admin.test.js`** — seeds a demo dataset and exercises the admin
+  console over HTTP: access control (anonymous → login, non-admin → 403,
+  admin → 200), every console page, the live overview JSON, client search +
+  deep view, a KYC approval action (DB state verified) and CSRF enforcement.
 
 ## Verification
 
