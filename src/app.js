@@ -9,6 +9,7 @@ const compression = require('compression');
 const config = require('./config');
 const { migrate } = require('./db');
 const { seedPools } = require('./db/seed');
+const usersModel = require('./models/users');
 
 const helmetMw = require('./security/helmet');
 const csrf = require('./security/csrf');
@@ -22,6 +23,26 @@ const timeUtil = require('./utils/time');
 function createApp() {
   migrate();
   seedPools();
+
+  // Optionally seed a rich demo dataset (admin + sample clients) on first boot
+  // so the admin dashboard is populated on ephemeral hosts. Best-effort: a
+  // failure here must never stop the app from serving.
+  if (config.demo.autoSeed) {
+    try {
+      require('./db/seedDemo').ensureSeeded();
+    } catch (err) {
+      console.error('demo seed skipped:', err.message);
+    }
+  }
+
+  // Bootstrap the first administrator: promote the configured admin email if
+  // such an account already exists. New registrations with that email are also
+  // promoted (see routes/auth.js).
+  try {
+    usersModel.promoteByEmail(config.admin.email);
+  } catch (err) {
+    console.error('admin bootstrap skipped:', err.message);
+  }
 
   const app = express();
   const sessionStore = new SqliteStore();
@@ -109,6 +130,7 @@ function createApp() {
   app.use('/', require('./routes/marketing'));
   app.use('/', require('./routes/auth'));
   app.use('/portal', require('./routes/portal'));
+  app.use('/admin', require('./routes/admin'));
   app.use('/api', require('./routes/api'));
 
   // 404

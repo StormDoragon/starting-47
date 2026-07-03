@@ -7,6 +7,9 @@
       <a href="/portal/deposit" class="<%= path === '/portal/deposit' ? 'active' : '' %>"><%- include('icon', { name: 'wallet', size: 18 }) %> Deposit</a>
       <a href="/portal/withdraw" class="<%= path === '/portal/withdraw' ? 'active' : '' %>"><%- include('icon', { name: 'arrowDown', size: 18 }) %> Withdraw</a>
       <a href="/portal/settings" class="<%= path === '/portal/settings' ? 'active' : '' %>"><%- include('icon', { name: 'settings', size: 18 }) %> Security</a>
+      <% if (currentUser && currentUser.isAdmin) { %>
+        <a href="/admin"><%- include('icon', { name: 'shield', size: 18 }) %> Admin console</a>
+      <% } %>
     </nav>
     <div class="side-user">
       <div class="avatar"><%= (currentUser.displayName || currentUser.email || 'U').trim().charAt(0).toUpperCase() %></div>

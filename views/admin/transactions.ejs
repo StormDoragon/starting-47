@@ -1,0 +1,68 @@
+<%- include('../partials/admin-head') %>
+
+<div class="portal-head">
+  <div>
+    <span class="eyebrow">Admin console</span>
+    <h1>Transactions</h1>
+  </div>
+  <span class="pill"><span class="dot"></span><%= total.toLocaleString('en-US') %> record<%= total===1?'':'s' %></span>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Flow summary -->
+<div class="grid grid-3">
+  <div class="card stat">
+    <div class="label">Deposits</div>
+    <div class="value text-up"><%= money.formatCents0(flow.deposit.total_cents) %></div>
+    <div class="sub text-muted"><%= flow.deposit.n %> transaction<%= flow.deposit.n===1?'':'s' %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Withdrawals</div>
+    <div class="value text-down"><%= money.formatCents0(flow.withdrawal.total_cents + flow.withdrawal_request.total_cents) %></div>
+    <div class="sub text-muted"><%= flow.withdrawal.n + flow.withdrawal_request.n %> transaction<%= (flow.withdrawal.n + flow.withdrawal_request.n)===1?'':'s' %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Net inflow</div>
+    <% var net = flow.deposit.total_cents - flow.withdrawal.total_cents - flow.withdrawal_request.total_cents; %>
+    <div class="value <%= net>=0?'text-up':'text-down' %>"><%= money.formatCents0(net) %></div>
+    <div class="sub text-muted">deposits − withdrawals</div>
+  </div>
+</div>
+
+<div class="flex justify-between items-center mt-3 mb-2 wrap gap-sm">
+  <h3 class="mb-0">Ledger</h3>
+  <div class="seg">
+    <a href="/admin/transactions" class="<%= type===''?'active':'' %>">All</a>
+    <a href="/admin/transactions?type=deposit" class="<%= type==='deposit'?'active':'' %>">Deposits</a>
+    <a href="/admin/transactions?type=withdrawal_request" class="<%= type==='withdrawal_request'?'active':'' %>">Early w/d</a>
+    <a href="/admin/transactions?type=withdrawal" class="<%= type==='withdrawal'?'active':'' %>">Matured w/d</a>
+  </div>
+</div>
+
+<div class="card" style="overflow-x:auto">
+  <table class="table">
+    <thead><tr><th>Type</th><th>Client</th><th>Detail</th><th class="text-right">Amount</th><th>Status</th><th class="text-right">Date</th></tr></thead>
+    <tbody>
+      <% if (!transactions.length) { %><tr><td colspan="6" class="text-muted text-center" style="padding:24px">No transactions.</td></tr><% } %>
+      <% transactions.forEach(function(t){
+           var label = t.type==='deposit'?'Deposit':(t.type==='withdrawal'?'Withdrawal':'Withdrawal req.');
+           var cls = t.type==='deposit'?'pill-up':'pill-down';
+           var detail = t.meta ? (t.meta.pool ? t.meta.pool : (t.meta.early ? 'Early ('+Math.round(t.meta.penaltyPct*100)+'% penalty)' : (t.meta.mature?'Matured':'—'))) : '—';
+           var sign = t.type==='deposit'?'':'−'; %>
+        <tr>
+          <td><span class="pill <%= cls %>" style="padding:2px 9px"><%= label %></span></td>
+          <td class="small"><a href="/admin/clients/<%= t.user_id %>"><%= t.user_name || t.user_email %></a></td>
+          <td class="small text-muted"><%= detail %><% if (t.meta && t.meta.method) { %> · <%= t.meta.method %><% } %></td>
+          <td class="text-right num"><%= sign + money.formatCents(t.amount_cents) %></td>
+          <td class="small <%= t.status==='completed'?'text-up':(t.status==='pending'?'text-muted':'text-down') %>"><%= t.status %></td>
+          <td class="text-right small text-muted"><%= time.formatDateTime(t.created_at) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/admin-pager', { page: page, pages: pages, base: '/admin/transactions?type=' + encodeURIComponent(type) + '&' }) %>
+
+<%- include('../partials/portal-foot') %>

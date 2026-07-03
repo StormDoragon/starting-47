@@ -1,0 +1,14 @@
+<%
+  // Expects: page (1-based), pages (total), base (href prefix ending in ? or &).
+  var _pages = typeof pages !== 'undefined' ? pages : 1;
+  var _page = typeof page !== 'undefined' ? page : 1;
+  var _base = typeof base !== 'undefined' ? base : '?';
+  function href(n){ return _base + 'page=' + n; }
+%>
+<% if (_pages > 1) { %>
+  <div class="pager">
+    <a class="btn btn-ghost btn-sm <%= _page <= 1 ? 'is-disabled' : '' %>" href="<%= href(Math.max(1, _page - 1)) %>">← Prev</a>
+    <span class="pager-info">Page <%= _page %> of <%= _pages %></span>
+    <a class="btn btn-ghost btn-sm <%= _page >= _pages ? 'is-disabled' : '' %>" href="<%= href(Math.min(_pages, _page + 1)) %>">Next →</a>
+  </div>
+<% } %>

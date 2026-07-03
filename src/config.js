@@ -74,6 +74,22 @@ const config = {
       process.env.DEMO_AUTO_APPROVE_KYC == null
         ? !isProd
         : process.env.DEMO_AUTO_APPROVE_KYC === 'true',
+    // When true, the app seeds a rich demo dataset (admin + sample clients,
+    // positions and history) on boot if the database has no users yet. Handy for
+    // ephemeral hosts (e.g. Vercel /tmp) so the admin dashboard is never empty.
+    autoSeed:
+      process.env.DEMO_SEED == null ? isVercel : process.env.DEMO_SEED === 'true',
+  },
+
+  // Back-office / admin access. Any account whose email matches admin.email is
+  // promoted to an administrator automatically (on boot and at registration),
+  // which is how the first admin is bootstrapped for this demo. The seed script
+  // creates this account with admin.password when it runs.
+  admin: {
+    email: (process.env.ADMIN_EMAIL || 'admin@meridian.demo').toLowerCase().trim(),
+    // Demo bootstrap password for the seeded admin account only. Override via
+    // ADMIN_PASSWORD; documented in the README so the demo is loginable.
+    password: process.env.ADMIN_PASSWORD || 'Admin-Demo-2026!',
   },
 
   // Session / crypto

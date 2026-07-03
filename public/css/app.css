@@ -372,6 +372,39 @@ canvas:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; bord
 .value-flash.up { color: var(--up); }
 .value-flash.down { color: var(--down); }
 
+/* ---- Admin console ------------------------------------------------------ */
+.admin-shell .portal-side { background: rgba(0, 0, 0, 0.32); }
+.admin-tag { margin-top: 14px; width: 100%; justify-content: center; }
+.avatar-sm { width: 26px; height: 26px; font-size: 0.78rem; }
+
+/* Compact key/value description lists used across admin detail panels. */
+.kv { margin: 0; display: grid; gap: 0; }
+.kv > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.kv > div:last-child { border-bottom: 0; }
+.kv dt { color: var(--faint); font-size: 0.82rem; margin: 0; }
+.kv dd { color: var(--text); font-size: 0.9rem; margin: 0; text-align: right; min-width: 0; word-break: break-word; }
+
+/* Search / filter toolbar. */
+.admin-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.admin-toolbar .input { max-width: 340px; }
+.admin-toolbar .select { width: auto; }
+
+/* Segmented filter control (link-based, no JS). */
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+.seg a { padding: 7px 14px; font-size: 0.85rem; color: var(--muted); border-right: 1px solid var(--line); }
+.seg a:last-child { border-right: 0; }
+.seg a:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+.seg a.active { background: var(--gold-soft); color: var(--gold-bright); }
+
+/* Weight meter bar (per-pool AUM share). */
+.meter { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.meter span { display: block; height: 100%; border-radius: 999px; }
+
+/* Pagination. */
+.pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; }
+.pager-info { font-size: 0.85rem; color: var(--muted); }
+.btn.is-disabled { opacity: 0.4; pointer-events: none; }
+
 /* ---- Utility ------------------------------------------------------------ */
 .flex { display: flex; }
 .items-center { align-items: center; }
