@@ -40,7 +40,7 @@
       <div><dt>Minimum deposit</dt><dd class="mono">$<%= terms.minDeposit.toLocaleString('en-US') %></dd></div>
       <div><dt>Lock period</dt><dd class="mono"><%= terms.lockYears %> years</dd></div>
       <div><dt>Management fee</dt><dd class="mono"><%= (terms.managementFeePct*100).toFixed(2) %>% p.a.</dd></div>
-      <div><dt>Auto-approve KYC</dt><dd><%= demo.autoApproveKyc ? 'Yes (demo)' : 'No' %></dd></div>
+      <div><dt>Auto-approve KYC</dt><dd><%= demo.autoApproveKyc ? 'Yes (trial)' : 'No' %></dd></div>
     </dl>
   </div>
 </div>

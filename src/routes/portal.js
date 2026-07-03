@@ -65,11 +65,11 @@ router.post('/onboarding', sensitiveLimiter, (req, res, next) => {
     audit.log(
       req.user.id,
       'kyc.submitted',
-      config.demo.autoApproveKyc ? 'auto-approved (demo)' : 'pending review',
+      config.demo.autoApproveKyc ? 'auto-approved (trial)' : 'pending review',
       req,
     );
     if (config.demo.autoApproveKyc) {
-      req.flash('success', 'Identity verified (auto-approved for this demo). You can now fund your account.');
+      req.flash('success', 'Identity verified (auto-approved for this trial). You can now fund your account.');
       return res.redirect('/portal/deposit');
     }
     req.flash('success', 'Identity verification submitted. We will notify you when review is complete.');
@@ -140,7 +140,7 @@ router.post('/deposit', sensitiveLimiter, requireKyc, (req, res, next) => {
         pools,
         form,
         errors: {
-          form: `The maximum per pool in this demo is ${config.terms.currency} ${config.terms.maxDeposit.toLocaleString()}.`,
+          form: `The maximum per pool in this trial is ${config.terms.currency} ${config.terms.maxDeposit.toLocaleString()}.`,
         },
       });
     }

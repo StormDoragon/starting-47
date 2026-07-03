@@ -51,7 +51,7 @@ const config = {
     tagline: 'Global markets, one disciplined portfolio.',
     // The single required legal line, shown on every page.
     disclaimer:
-      'Demo platform for portfolio purposes. Not a real investment offering. No real funds are processed.',
+      'Simulated platform for portfolio purposes. Not a real investment offering. No real funds are processed.',
   },
 
   // Product terms (mock)
